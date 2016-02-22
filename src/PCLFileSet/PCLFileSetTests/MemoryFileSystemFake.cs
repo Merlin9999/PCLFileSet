@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using NUnit.Framework.Constraints;
 using PCLStorage;
 
 namespace PCLFileSetTests
@@ -68,6 +69,17 @@ namespace PCLFileSetTests
 
         public async Task<IFile> GetFileFromPathAsync(string path, CancellationToken cancellationToken = new CancellationToken())
         {
+            string folderPath = this.GetFolderPath(path);
+            string fileName = this.GetFileName(path);
+            Folder folder = this.FindFolder(folderPath);
+
+            if (folder.Files.Any(file => this.EntryNameComparer.Compare(file, fileName) != 0))
+            {
+                if (this.ThrowOnError)
+                    throw new FileNotFoundException($"File not found: \"{path}\"");
+                return null;
+            }
+
             return new MemoryFileFake(this, path);
         }
 

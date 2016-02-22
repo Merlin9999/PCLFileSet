@@ -15,7 +15,7 @@ namespace PCLFileSet
     {
         private static string[] FolderSeparatorsStatic => new[] { @"\", @"/" };
 
-        private bool _isCaseSensitive;
+        private readonly bool _isCaseSensitive;
         private readonly string[] _alternatePathSeparators;
         private List<string> IncludePaths { get; }
         private List<string> ExcludePaths { get; }
@@ -125,13 +125,13 @@ namespace PCLFileSet
                     {
                         if (curChar == '?')
                         {
-                            StringBuilderListExtensions.Append(pathRegexStrs, (string) Regex.Escape(subSeg.ToString()));
+                            pathRegexStrs.Append((string) Regex.Escape(subSeg.ToString()));
                             subSeg.Clear();
                             pathRegexStrs.Append(noSeparatorRegexChar);
                         }
                         else if (curChar == '*')
                         {
-                            StringBuilderListExtensions.Append(pathRegexStrs, (string) Regex.Escape(subSeg.ToString()));
+                            pathRegexStrs.Append((string) Regex.Escape(subSeg.ToString()));
                             subSeg.Clear();
                             pathRegexStrs.Append(noSeparatorRegexChar).Append('*');
                         }
@@ -141,7 +141,7 @@ namespace PCLFileSet
                         }
                     }
 
-                    StringBuilderListExtensions.Append(pathRegexStrs, (string) Regex.Escape(subSeg.ToString()));
+                    pathRegexStrs.Append((string) Regex.Escape(subSeg.ToString()));
                 }
             }
 
