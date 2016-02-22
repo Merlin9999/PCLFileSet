@@ -68,10 +68,22 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AddFolderEntryImpl.cs" />
+    <Compile Include="FileSetTests.cs" />
+    <Compile Include="IAddFolderEntry.cs" />
+    <Compile Include="MemoryFileFake.cs" />
+    <Compile Include="MemoryFileSystemFake.cs" />
+    <Compile Include="MemoryFolderFake.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PCLFileSet\PCLFileSet.csproj">
+      <Project>{e6ac9418-7059-4bf4-8440-53fe747cf9cb}</Project>
+      <Name>PCLFileSet</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -34,7 +34,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="FileSet.cs" />
+    <Compile Include="IFileSet.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="StringBuilderListExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="PCLStorage, Version=1.0.2.0, Culture=neutral, PublicKeyToken=286fe515a2c35b64, processorArchitecture=MSIL">
