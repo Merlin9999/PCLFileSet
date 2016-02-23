@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace PCLFileSet
 {
@@ -7,7 +8,7 @@ namespace PCLFileSet
         IFileSet Include(string globPath);
         IFileSet Exclude(string globPath);
 
-        IEnumerable<string> GetFiles();
-        IEnumerable<string> GetFolders();
+        Task<IEnumerable<string>> GetFilesAsync();
+        Task<IEnumerable<string>> GetFoldersAsync();
     }
 }

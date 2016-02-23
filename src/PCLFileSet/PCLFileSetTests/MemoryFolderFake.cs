@@ -9,19 +9,27 @@ namespace PCLFileSetTests
 {
     public class MemoryFolderFake : IFolder
     {
-        private MemoryFileSystemFake _fileSys;
+        private readonly MemoryFileSystemFake _fileSys;
 
         public string Name { get; }
         public string Path { get; }
 
-        public MemoryFolderFake(MemoryFileSystemFake fileSys, string folderPath)
+        public HashSet<string> Files { get; }
+        public Dictionary<string, MemoryFolderFake> Folders { get; }
+        public MemoryFolderFake Parent { get; }
+
+        public MemoryFolderFake(MemoryFileSystemFake fileSys, string folderPath, MemoryFolderFake parent)
         {
             this._fileSys = fileSys;
-            this.Name = this._fileSys.GetFolderPath(folderPath);
+            this.Name = folderPath == null ? null : this._fileSys.GetFolderPath(folderPath);
             this.Path = folderPath;
+            this.Parent = parent;
+            this.Files = new HashSet<string>(this._fileSys.EntryNameComparer);
+            this.Folders = new Dictionary<string, MemoryFolderFake>(this._fileSys.EntryNameComparer);
         }
 
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+#pragma warning disable CS1998 // Async methods lacks 'await' operators and will run synchronously
+
         public async Task<IFile> CreateFileAsync(string desiredName, CreationCollisionOption option,
             CancellationToken cancellationToken = new CancellationToken())
         {
@@ -32,16 +40,14 @@ namespace PCLFileSetTests
         {
             throw new NotImplementedException();
         }
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
 
         public async Task<IList<IFile>> GetFilesAsync(CancellationToken cancellationToken = new CancellationToken())
         {
-            return this._fileSys.EnumerateFiles(this.Path)
-                .Select(fp => new MemoryFileFake(this._fileSys, fp))
+            return this.Files
+                .Select(fp => new MemoryFileFake(this._fileSys, this.Path == null ? fp : PortablePath.Combine(this.Path, fp)))
                 .ToList<IFile>();
         }
 
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public async Task<IFolder> CreateFolderAsync(string desiredName, CreationCollisionOption option,
             CancellationToken cancellationToken = new CancellationToken())
         {
@@ -52,16 +58,12 @@ namespace PCLFileSetTests
         {
             throw new NotImplementedException();
         }
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
 
         public async Task<IList<IFolder>> GetFoldersAsync(CancellationToken cancellationToken = new CancellationToken())
         {
-            return this._fileSys.EnumerateFolders(this.Path)
-                .Select(fp => new MemoryFolderFake(this._fileSys, fp))
-                .ToList<IFolder>();
+            return this.Folders.Values.ToList<IFolder>();
         }
 
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public async Task<ExistenceCheckResult> CheckExistsAsync(string name, CancellationToken cancellationToken = new CancellationToken())
         {
             throw new NotImplementedException();
@@ -71,6 +73,8 @@ namespace PCLFileSetTests
         {
             throw new NotImplementedException();
         }
- #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
-   }
+
+#pragma warning restore CS1998 // Async methods lacks 'await' operators and will run synchronously
+
+    }
 }

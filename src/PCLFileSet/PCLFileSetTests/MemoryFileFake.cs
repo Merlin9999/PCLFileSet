@@ -22,6 +22,7 @@ namespace PCLFileSetTests
         }
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
         public async Task<Stream> OpenAsync(FileAccess fileAccess, CancellationToken cancellationToken = new CancellationToken())
         {
             throw new NotImplementedException();
@@ -43,6 +44,8 @@ namespace PCLFileSetTests
         {
             throw new NotImplementedException();
         }
+
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+
     }
 }

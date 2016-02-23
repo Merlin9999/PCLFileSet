@@ -11,8 +11,8 @@ namespace PCLFileSetTests
 {
     public class MemoryFileSystemFake : IFileSystem
     {
-        private Folder RootFolder { get; }
-        private Folder CurrentWorkingFolder { get; set; }
+        private MemoryFolderFake RootFolder { get; }
+        private MemoryFolderFake CurrentWorkingFolder { get; set; }
 
         public bool IsCaseSensitive { get; }
         public static string PreferredFolderSeparatorStatic => @"\";
@@ -34,7 +34,7 @@ namespace PCLFileSetTests
             this.EntryNameComparer = isCaseInsensitive
                 ? StringComparer.CurrentCulture
                 : StringComparer.CurrentCultureIgnoreCase;
-            this.RootFolder = new Folder(this, null, null);
+            this.RootFolder = new MemoryFolderFake(this, null, null);
             this.CurrentWorkingFolder = this.RootFolder;
 
             // Not needed for current unit tests.
@@ -47,7 +47,7 @@ namespace PCLFileSetTests
             foreach (string filePath in filePaths)
             {
                 string folderPath = this.GetFolderPath(filePath);
-                Folder folder = this.FindFolder(folderPath, createIfDoesNotExist: true);
+                MemoryFolderFake folder = this.FindFolder(folderPath, createIfDoesNotExist: true);
                 folder.Files.Add(this.GetFileName(filePath));
             }
         }
@@ -59,21 +59,13 @@ namespace PCLFileSetTests
             this.AddFiles(addFolderEntryImpl.GetFilePaths());
         }
 
-        public IEnumerable<string> EnumerateFiles(string basePath)
-        {
-            Folder basePathFolder = this.FindFolder(basePath);
-            if (basePathFolder != null)
-                foreach (string file in this.EnumerateFiles(basePathFolder, string.Empty))
-                    yield return file;
-        }
-
         public async Task<IFile> GetFileFromPathAsync(string path, CancellationToken cancellationToken = new CancellationToken())
         {
             string folderPath = this.GetFolderPath(path);
             string fileName = this.GetFileName(path);
-            Folder folder = this.FindFolder(folderPath);
+            MemoryFolderFake folder = this.FindFolder(folderPath);
 
-            if (folder.Files.Any(file => this.EntryNameComparer.Compare(file, fileName) != 0))
+            if (folder.Files.All(file => this.EntryNameComparer.Compare(file, fileName) != 0))
             {
                 if (this.ThrowOnError)
                     throw new FileNotFoundException($"File not found: \"{path}\"");
@@ -85,62 +77,11 @@ namespace PCLFileSetTests
 
         public async Task<IFolder> GetFolderFromPathAsync(string path, CancellationToken cancellationToken = new CancellationToken())
         {
-            return new MemoryFolderFake(this, path);
-        }
-
-        private IEnumerable<string> EnumerateFiles(Folder folder, string nestedPath)
-        {
-            foreach (string file in folder.Files)
-            {
-                if (nestedPath.Length > 0)
-                    yield return this.CombinePath(nestedPath, file);
-                else
-                    yield return file;
-            }
-
-            foreach (Folder subFolder in folder.Folders.Values)
-            {
-                string subFolderPath;
-
-                if (nestedPath.Length > 0)
-                    subFolderPath = this.CombinePath(nestedPath, subFolder.Name);
-                else
-                    subFolderPath = subFolder.Name;
-
-                foreach (string filePath in this.EnumerateFiles(subFolder, subFolderPath))
-                    yield return filePath;
-            }
-        }
-
-        public IEnumerable<string> EnumerateFolders(string basePath)
-        {
-            Folder basePathFolder = this.FindFolder(basePath);
-            if (basePathFolder != null)
-                foreach (string folderPath in this.EnumerateFolders(basePathFolder, string.Empty))
-                    yield return folderPath;
-        }
-
-        private IEnumerable<string> EnumerateFolders(Folder folder, string nestedPath)
-        {
-            foreach (Folder subFolder in folder.Folders.Values)
-            {
-                string subFolderPath;
-
-                if (nestedPath.Length > 0)
-                    subFolderPath = this.CombinePath(nestedPath, subFolder.Name);
-                else
-                    subFolderPath = subFolder.Name;
-
-                yield return subFolderPath;
-
-                foreach (string folderPath in this.EnumerateFolders(subFolder, subFolderPath))
-                    yield return folderPath;
-            }
+            return this.FindFolder(path);
         }
 
         public bool IsPathRooted(string path)
         {
-            path = path.TrimStart();
             return this.FolderSeparators.Any(sep => path.StartsWith(sep));
         }
 
@@ -173,14 +114,14 @@ namespace PCLFileSetTests
             return pathSegments.Last();
         }
 
-        private Folder FindFolder(string folderPath, bool createIfDoesNotExist = false)
+        internal MemoryFolderFake FindFolder(string folderPath, bool createIfDoesNotExist = false)
         {
             if (folderPath == null)
                 return this.CurrentWorkingFolder;
 
             string[] pathSegments = this.GetPathSegments(folderPath);
 
-            Folder curFolder =
+            MemoryFolderFake curFolder =
                 this.IsPathRooted(folderPath)
                     ? this.RootFolder
                     : this.CurrentWorkingFolder;
@@ -188,7 +129,7 @@ namespace PCLFileSetTests
             for (int index = 0; index < pathSegments.Length; index++)
             {
                 string curSegment = pathSegments[index];
-                Folder foundFolder;
+                MemoryFolderFake foundFolder;
 
                 if (curSegment == ".")
                 {
@@ -212,7 +153,7 @@ namespace PCLFileSetTests
                 {
                     if (createIfDoesNotExist)
                     {
-                        foundFolder = new Folder(this, curSegment, curFolder);
+                        foundFolder = new MemoryFolderFake(this, curFolder.Path == null ? curSegment : PortablePath.Combine(curFolder.Path, curSegment), curFolder);
                         curFolder.Folders.Add(curSegment, foundFolder);
                     }
                     else if (this.ThrowOnError)
@@ -232,18 +173,18 @@ namespace PCLFileSetTests
             return curFolder;
         }
 
-        private string[] GetPathSegments(Folder folder)
-        {
-            var nameSegments = new Stack<string>();
+        //private string[] GetPathSegments(MemoryFolderFake folder)
+        //{
+        //    var nameSegments = new Stack<string>();
 
-            while (!string.IsNullOrWhiteSpace(folder.Name))
-            {
-                nameSegments.Push(folder.Name);
-                folder = folder.Parent;
-            }
+        //    while (!string.IsNullOrWhiteSpace(folder.Name))
+        //    {
+        //        nameSegments.Push(folder.Name);
+        //        folder = folder.Parent;
+        //    }
 
-            return nameSegments.ToArray();
-        }
+        //    return nameSegments.ToArray();
+        //}
 
         private string BuildPathString(IEnumerable<string> segments, bool makeRooted)
         {
@@ -255,25 +196,6 @@ namespace PCLFileSetTests
                 return this.PreferredFolderSeparator;
 
             return path;
-        }
-
-        private class Folder
-        {
-            private readonly MemoryFileSystemFake _fileSystem;
-            public string Name { get; set; }
-            public Folder Parent { get; }
-
-            public Folder(MemoryFileSystemFake fileSystem, string name, Folder parent)
-            {
-                this._fileSystem = fileSystem;
-                this.Name = name;
-                this.Parent = parent;
-                this.Files = new HashSet<string>(this._fileSystem.EntryNameComparer);
-                this.Folders = new Dictionary<string, Folder>(this._fileSystem.EntryNameComparer);
-            }
-
-            public HashSet<string> Files { get; }
-            public Dictionary<string, Folder> Folders { get; }
         }
     }
 }

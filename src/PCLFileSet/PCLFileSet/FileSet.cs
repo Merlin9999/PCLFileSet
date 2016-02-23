@@ -57,22 +57,22 @@ namespace PCLFileSet
             return this;
         }
 
-        public IEnumerable<string> GetFiles()
+        public async Task<IEnumerable<string>> GetFilesAsync()
         {
             var includeRegexList = this.IncludePaths.SelectMany(p => this.BuildPathMatchRegexes(p)).ToList();
             var excludeRegexList = this.ExcludePaths.SelectMany(p => this.BuildPathMatchRegexes(p)).ToList();
 
-            return this.EnumerateFiles()
+            return (await this.EnumerateFilesAsync())
                 .Where(filePath => includeRegexList.Any(includeRegex => includeRegex.IsMatch(filePath)))
                 .Where(filePath => !excludeRegexList.Any(excludeRegex => excludeRegex.IsMatch(filePath)));
         }
 
-        public IEnumerable<string> GetFolders()
+        public async Task<IEnumerable<string>> GetFoldersAsync()
         {
             var includeRegexList = this.IncludePaths.SelectMany(p => this.BuildPathMatchRegexes(p)).ToList();
             var excludeRegexList = this.ExcludePaths.SelectMany(p => this.BuildPathMatchRegexes(p)).ToList();
 
-            return this.EnumerateFolders()
+            return (await this.EnumerateFoldersAsync())
                 .Where(filePath => includeRegexList.Any(includeRegex => includeRegex.IsMatch(filePath)))
                 .Where(filePath => !excludeRegexList.Any(excludeRegex => excludeRegex.IsMatch(filePath)));
         }
@@ -151,48 +151,57 @@ namespace PCLFileSet
                 this._isCaseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase));
         }
 
-        private IEnumerable<string> EnumerateFiles()
+        private async Task<IEnumerable<string>> EnumerateFilesAsync()
         {
-            Task<IObservable<IFile>> task = this.GetFilesAsObservable();
-            task.Wait();
-            return task.Result.ToEnumerable().Select(x => x.Path);
+            return (await this.GetFilesAsObservableAsync()).ToEnumerable().Select(x => x.Path);
         }
 
-        private IEnumerable<string> EnumerateFolders()
+        private async Task<IEnumerable<string>> EnumerateFoldersAsync()
         {
-            Task<IObservable<IFolder>> task = this.GetFoldersAsObservable();
-            task.Wait();
-            return task.Result.ToEnumerable().Select(x => x.Path);
+            return (await this.GetFoldersAsObservableAsync()).ToEnumerable().Select(x => x.Path);
         }
 
-        private async Task<IObservable<IFile>> GetFilesAsObservable()
+        private async Task<IObservable<IFile>> GetFilesAsObservableAsync()
         {
             IFolder folder = await this.FileSystem.GetFolderFromPathAsync(this.BasePath);
-            IList<IFile> files = await folder.GetFilesAsync();
             
-            return Observable.Create((IObserver<IFile> observer) =>
+            return Observable.Create(async (IObserver<IFile> observer) =>
             {
-                foreach (IFile file in files)
-                    observer.OnNext(file);
+                await this.PostSubfolderFilesToObserverAsync(observer, folder);
                 observer.OnCompleted();
                 return Disposable.Create(() => { });
             });
         }
 
-        private async Task<IObservable<IFolder>> GetFoldersAsObservable()
+        private async Task PostSubfolderFilesToObserverAsync(IObserver<IFile> observer, IFolder folder)
+        {
+            foreach (IFile file in await folder.GetFilesAsync())
+                observer.OnNext(file);
+
+            foreach (IFolder subfolder in await folder.GetFoldersAsync())
+                await this.PostSubfolderFilesToObserverAsync(observer, subfolder);
+        }
+
+        private async Task<IObservable<IFolder>> GetFoldersAsObservableAsync()
         {
             IFolder folder = await this.FileSystem.GetFolderFromPathAsync(this.BasePath);
-            IList<IFolder> folders = await folder.GetFoldersAsync();
 
-            return Observable.Create((IObserver<IFolder> observer) =>
+            return Observable.Create(async (IObserver<IFolder> observer) =>
             {
-                foreach (IFolder subFolder in folders)
-                    observer.OnNext(subFolder);
+                await this.PostSubfoldersToObserverAsync(observer, folder);
                 observer.OnCompleted();
                 return Disposable.Create(() => { });
             });
         }
 
+        private async Task PostSubfoldersToObserverAsync(IObserver<IFolder> observer, IFolder folder)
+        {
+            foreach (IFolder subfolder in await folder.GetFoldersAsync())
+            {
+                observer.OnNext(subfolder);
+                await this.PostSubfoldersToObserverAsync(observer, subfolder);
+            }
+        }
 
         private string GetPathWithPreferredSeparator(string path)
         {

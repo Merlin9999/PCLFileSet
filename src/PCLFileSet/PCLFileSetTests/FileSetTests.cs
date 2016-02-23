@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using NUnit.Framework;
 using PCLFileSet;
 using PCLStorage;
@@ -10,7 +11,7 @@ namespace PCLFileSetTests
     public class FileSetTests
     {
         [Test]
-        public void IncludeAllFilesInSubFolderInFolder()
+        public async Task IncludeAllFilesInSubFolderInFolder()
         {
             var sys = new MemoryFileSystemFake();
             const string fileNameToFind = "FileInSubFolder.txt";
@@ -26,14 +27,14 @@ namespace PCLFileSetTests
                     .File("FileInFolder.txt")));
             var fs = new FileSet(sys, "/");
             fs.Include(PortablePath.Combine("a", "b", "*"));
-            List<string> files = fs.GetFiles().ToList();
+            List<string> files = (await fs.GetFilesAsync()).ToList();
 
             Assert.That(files.Count, Is.EqualTo(1));
             Assert.That(files, Has.Member(filePathToFind));
         }
 
         [Test]
-        public void IncludeFolderFilesAndSubFolderFiles()
+        public async Task IncludeFolderFilesAndSubFolderFiles()
         {
             var sys = new MemoryFileSystemFake();
             const string fileNameToFind1 = "FileInFolder.txt";
@@ -53,7 +54,7 @@ namespace PCLFileSetTests
                     .File("FileInFolder.txt")));
             var fs = new FileSet(sys, "/");
             fs.Include(PortablePath.Combine("a", "**", "*"));
-            List<string> files = fs.GetFiles().ToList();
+            List<string> files = (await fs.GetFilesAsync()).ToList();
 
             Assert.That(files.Count, Is.EqualTo(3));
             Assert.That(files, Has.Member(filePathToFind1));
@@ -62,7 +63,7 @@ namespace PCLFileSetTests
         }
 
         [Test]
-        public void IncludeAllFilesInAnyFolderWithASpecificExtension()
+        public async Task IncludeAllFilesInAnyFolderWithASpecificExtension()
         {
             var sys = new MemoryFileSystemFake();
             const string fileNameToFind1 = "FileInRoot.zzz";
@@ -82,7 +83,7 @@ namespace PCLFileSetTests
                     .File(fileNameToFind3)));
             var fs = new FileSet(sys);
             fs.Include(PortablePath.Combine("**", "*.zzz"));
-            List<string> files = fs.GetFiles().ToList();
+            List<string> files = (await fs.GetFilesAsync()).ToList();
 
             Assert.That(files.Count, Is.EqualTo(3));
             Assert.That(files, Has.Member(filePathToFind1));
@@ -91,7 +92,7 @@ namespace PCLFileSetTests
         }
 
         [Test]
-        public void IncludeAllFilesInAnyFolderWithASpecificExtensionWithRootedFileSpec()
+        public async Task IncludeAllFilesInAnyFolderWithASpecificExtensionWithRootedFileSpec()
         {
             var sys = new MemoryFileSystemFake();
             const string fileNameToFind1 = "FileInRoot.zzz";
@@ -111,7 +112,7 @@ namespace PCLFileSetTests
                     .File(fileNameToFind3)));
             var fs = new FileSet(sys, "/");
             fs.Include("**/*.zzz");
-            List<string> files = fs.GetFiles().ToList();
+            List<string> files = (await fs.GetFilesAsync()).ToList();
 
             Assert.That(files.Count, Is.EqualTo(3));
             Assert.That(files, Has.Member(filePathToFind1));
@@ -120,7 +121,7 @@ namespace PCLFileSetTests
         }
 
         [Test]
-        public void MultipleIncludesAndAnExclusions()
+        public async Task MultipleIncludesAndAnExclusions()
         {
             var sys = new MemoryFileSystemFake();
             const string fileNameToFind1 = "FileInRoot.zzz";
@@ -145,7 +146,7 @@ namespace PCLFileSetTests
             fs.Include("**/*.yyy");
             fs.Exclude("**/*eInF*z*");
             fs.Exclude("a/*.yyy");
-            List<string> files = fs.GetFiles().ToList();
+            List<string> files = (await fs.GetFilesAsync()).ToList();
 
             Assert.That(files.Count, Is.EqualTo(2));
             Assert.That(files, Has.No.Member(filePathNotFound1));
@@ -155,7 +156,7 @@ namespace PCLFileSetTests
         }
 
         [Test]
-        public void IncludeAllAndMultipleExcludesWithQuestionMarkWildcard()
+        public async Task IncludeAllAndMultipleExcludesWithQuestionMarkWildcard()
         {
             var sys = new MemoryFileSystemFake();
             const string fileNameToFind = "FileInFolder.yyy";
@@ -174,7 +175,7 @@ namespace PCLFileSetTests
             fs.Exclude(@"?\?\*");
             fs.Exclude(@"**\Another*");
             fs.Exclude(@"**\*?zz");
-            List<string> files = fs.GetFiles().ToList();
+            List<string> files = (await fs.GetFilesAsync()).ToList();
 
             Assert.That(files.Count, Is.EqualTo(1));
             Assert.That(files, Has.Member(filePathToFind));
