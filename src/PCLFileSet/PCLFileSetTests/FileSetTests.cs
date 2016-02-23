@@ -126,15 +126,55 @@ namespace PCLFileSetTests
         [Test]
         public async Task MultipleIncludesAndAnExclusions()
         {
+            string filePathToFind1;
+            string filePathNotFound1;
+            string filePathToFind2;
+            string filePathNotFound2;
+            FileSet fs = CreateFileSetForMultipleIncludesAndAnExclusions(
+                out filePathToFind1, out filePathToFind2, out filePathNotFound1, out filePathNotFound2);
+
+            List<string> files = (await fs.GetFilesAsync()).ToList();
+
+            ValidateFileSetForMultipleIncludesAndAnExclusions(files,
+                filePathToFind1, filePathToFind2, filePathNotFound1, filePathNotFound2);
+        }
+
+        [Test]
+        public async Task MultipleIncludesAndAnExclusionsAsObservable()
+        {
+            string filePathToFind1;
+            string filePathNotFound1;
+            string filePathToFind2;
+            string filePathNotFound2;
+            FileSet fs = CreateFileSetForMultipleIncludesAndAnExclusions(
+                out filePathToFind1, out filePathToFind2, out filePathNotFound1, out filePathNotFound2);
+
+            IObservable<string> filesObservable = await fs.GetFilesAsObservableAsync();
+
+            List<string> files = new List<string>();
+            filesObservable
+                .Finally(() =>
+                {
+                    ValidateFileSetForMultipleIncludesAndAnExclusions(files, 
+                        filePathToFind1, filePathToFind2, filePathNotFound1, filePathNotFound2);
+                })
+                .Subscribe(
+                    filePath => files.Add(filePath));
+        }
+
+        private static FileSet CreateFileSetForMultipleIncludesAndAnExclusions(
+            out string filePathToFind1, out string filePathToFind2, 
+            out string filePathNotFound1, out string filePathNotFound2)
+        {
             var sys = new MemoryFileSystemFake();
             const string fileNameToFind1 = "FileInRoot.zzz";
             const string fileNotFound1 = "FileInFolder.yyy";
             const string fileNameToFind2 = "FileInSubFolder.yyy";
             const string fileNotFound2 = "FileInFolder.zzz";
-            string filePathToFind1 = PortablePath.Combine(fileNameToFind1);
-            string filePathNotFound1 = PortablePath.Combine("a", fileNotFound1);
-            string filePathToFind2 = PortablePath.Combine("a", "b", fileNameToFind2);
-            string filePathNotFound2 = PortablePath.Combine("c", fileNotFound2);
+            filePathToFind1 = PortablePath.Combine(fileNameToFind1);
+            filePathNotFound1 = PortablePath.Combine("a", fileNotFound1);
+            filePathToFind2 = PortablePath.Combine("a", "b", fileNameToFind2);
+            filePathNotFound2 = PortablePath.Combine("c", fileNotFound2);
             sys.AddFiles(x => x
                 .File(fileNameToFind1)
                 .Folder("a", a => a
@@ -149,13 +189,19 @@ namespace PCLFileSetTests
             fs.Include("**/*.yyy");
             fs.Exclude("**/*eInF*z*");
             fs.Exclude("a/*.yyy");
-            List<string> files = (await fs.GetFilesAsync()).ToList();
+            return fs;
+        }
 
-            Assert.That(files.Count, Is.EqualTo(2));
-            Assert.That(files, Has.No.Member(filePathNotFound1));
-            Assert.That(files, Has.No.Member(filePathNotFound2));
-            Assert.That(files, Has.Member(filePathToFind1));
-            Assert.That(files, Has.Member(filePathToFind2));
+        private static void ValidateFileSetForMultipleIncludesAndAnExclusions(
+            List<string> foundFiles, 
+            string filePathToFind1, string filePathToFind2, 
+            string filePathNotFound1, string filePathNotFound2)
+        {
+            Assert.That(foundFiles.Count, Is.EqualTo(2));
+            Assert.That(foundFiles, Has.No.Member(filePathNotFound1));
+            Assert.That(foundFiles, Has.No.Member(filePathNotFound2));
+            Assert.That(foundFiles, Has.Member(filePathToFind1));
+            Assert.That(foundFiles, Has.Member(filePathToFind2));
         }
 
         [Test]
@@ -182,51 +228,6 @@ namespace PCLFileSetTests
 
             Assert.That(files.Count, Is.EqualTo(1));
             Assert.That(files, Has.Member(filePathToFind));
-        }
-
-        [Test]
-        public async Task MultipleIncludesAndAnExclusionsAsObservable()
-        {
-            var sys = new MemoryFileSystemFake();
-            const string fileNameToFind1 = "FileInRoot.zzz";
-            const string fileNotFound1 = "FileInFolder.yyy";
-            const string fileNameToFind2 = "FileInSubFolder.yyy";
-            const string fileNotFound2 = "FileInFolder.zzz";
-            string filePathToFind1 = PortablePath.Combine(fileNameToFind1);
-            string filePathNotFound1 = PortablePath.Combine("a", fileNotFound1);
-            string filePathToFind2 = PortablePath.Combine("a", "b", fileNameToFind2);
-            string filePathNotFound2 = PortablePath.Combine("c", fileNotFound2);
-            sys.AddFiles(x => x
-                .File(fileNameToFind1)
-                .Folder("a", a => a
-                    .File(fileNotFound1)
-                    .File("AnotherFileInFolder.txt")
-                    .Folder("b", b => b
-                        .File(fileNameToFind2)))
-                .Folder("c", c => c
-                    .File(fileNotFound2)));
-            var fs = new FileSet(sys, "/");
-            fs.Include("**/*.zzz");
-            fs.Include("**/*.yyy");
-            fs.Exclude("**/*eInF*z*");
-            fs.Exclude("a/*.yyy");
-
-            IObservable<string> filesObservable = await fs.GetFilesAsObservableAsync();
-
-            List<string> files = new List<string>();
-            filesObservable.Subscribe(
-                filePath => files.Add(filePath),
-                () =>
-                {
-                    //TODO: The assert below throws an exception, but it's swallowed up and not reported.
-
-                    Assert.That(files.Count, Is.EqualTo(1));
-                    //Assert.That(files.Count, Is.EqualTo(2));
-                    Assert.That(files, Has.No.Member(filePathNotFound1));
-                    Assert.That(files, Has.No.Member(filePathNotFound2));
-                    Assert.That(files, Has.Member(filePathToFind1));
-                    Assert.That(files, Has.Member(filePathToFind2));
-                });
         }
     }
 }
