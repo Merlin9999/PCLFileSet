@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -10,5 +11,8 @@ namespace PCLFileSet
 
         Task<IEnumerable<string>> GetFilesAsync();
         Task<IEnumerable<string>> GetFoldersAsync();
+
+        Task<IObservable<string>> GetFilesAsObservableAsync();
+        Task<IObservable<string>> GetFoldersAsObservableAsync();
     }
 }
