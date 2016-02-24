@@ -9,6 +9,7 @@ namespace PCLFileSetTests
         private readonly MemoryFileSystemFake _fileSystemFake;
         private List<string> _pathSegments = new List<string>();
         private List<string> _addedFiles = new List<string>();
+        private List<string> _addedFolders = new List<string>();
 
         public AddFolderEntryImpl(MemoryFileSystemFake fileSystemFake)
         {
@@ -27,6 +28,7 @@ namespace PCLFileSetTests
         {
             this._pathSegments.Add(folderName);
             folderEntryAdderFunc(this);
+            this._addedFolders.Add(this._fileSystemFake.CombinePath(this._pathSegments));
             this._pathSegments.RemoveAt(this._pathSegments.Count - 1);
             return this;
         }
@@ -34,6 +36,11 @@ namespace PCLFileSetTests
         public string[] GetFilePaths()
         {
             return this._addedFiles.ToArray();
+        }
+
+        public string[] GetFolderPaths()
+        {
+            return this._addedFolders.ToArray();
         }
     }
 }

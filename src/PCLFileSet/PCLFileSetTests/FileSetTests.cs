@@ -37,6 +37,29 @@ namespace PCLFileSetTests
         }
 
         [Test]
+        public async Task IncludeAllFilesInSubFolder()
+        {
+            var sys = new MemoryFileSystemFake();
+            const string fileNameToFind = "FileInSubFolder.txt";
+            string filePathToFind = PortablePath.Combine("b", fileNameToFind);
+            sys.AddFiles(x => x
+                .File("FileInRoot.txt")
+                .Folder("a", a => a
+                    .File("FileInFolder.txt")
+                    .File("AnotherFileInFolder.txt")
+                    .Folder("b", b => b
+                        .File(fileNameToFind)))
+                .Folder("c", c => c
+                    .File("FileInFolder.txt")));
+            var fs = new FileSet(sys, "/" + "a");
+            fs.Include(PortablePath.Combine("b", "*"));
+            List<string> files = (await fs.GetFilesAsync()).ToList();
+
+            Assert.That(files.Count, Is.EqualTo(1));
+            Assert.That(files, Has.Member(filePathToFind));
+        }
+
+        [Test]
         public async Task IncludeFolderFilesAndSubFolderFiles()
         {
             var sys = new MemoryFileSystemFake();
@@ -228,6 +251,59 @@ namespace PCLFileSetTests
 
             Assert.That(files.Count, Is.EqualTo(1));
             Assert.That(files, Has.Member(filePathToFind));
+        }
+
+        [Test]
+        public async Task IncludeAllFoldersInTree()
+        {
+            var sys = new MemoryFileSystemFake();
+            const string folderNameToFind1 = "Folder1";
+            const string folderNameToFind2 = "Folder2";
+            const string folderNameToFind3 = "Folder3";
+            const string folderNameToFind4 = "Folder4";
+            const string folderNameToFind5 = "Folder5";
+            string folderPathToFind3 = PortablePath.Combine(folderNameToFind2, folderNameToFind3);
+            string folderPathToFind4 = PortablePath.Combine(folderNameToFind2, folderNameToFind4);
+            sys.AddFilesAndFolders(x => x
+                .Folder(folderNameToFind1, a => a)
+                .Folder(folderNameToFind2, a => a
+                    .Folder(folderNameToFind3, b => b)
+                    .Folder(folderNameToFind4, b => b))
+                .Folder(folderNameToFind5, c => c));
+            var fs = new FileSet(sys, "/");
+            fs.Include(@"**\*");
+            List<string> files = (await fs.GetFoldersAsync()).ToList();
+
+            Assert.That(files.Count, Is.EqualTo(5));
+            Assert.That(files, Has.Member(folderNameToFind1));
+            Assert.That(files, Has.Member(folderNameToFind2));
+            Assert.That(files, Has.Member(folderPathToFind3));
+            Assert.That(files, Has.Member(folderPathToFind4));
+            Assert.That(files, Has.Member(folderNameToFind5));
+        }
+
+        [Test]
+        public async Task IncludeAllFoldersInSubFolder()
+        {
+            var sys = new MemoryFileSystemFake();
+            const string folderNameToFind1 = "Folder1";
+            const string folderNameToFind2 = "Folder2";
+            const string folderNameToFind3 = "Folder3";
+            const string folderNameToFind4 = "Folder4";
+            const string folderNameToFind5 = "Folder5";
+            sys.AddFilesAndFolders(x => x
+                .Folder(folderNameToFind1, a => a)
+                .Folder(folderNameToFind2, a => a
+                    .Folder(folderNameToFind3, b => b)
+                    .Folder(folderNameToFind4, b => b))
+                .Folder(folderNameToFind5, c => c));
+            var fs = new FileSet(sys, "/" + folderNameToFind2);
+            fs.Include(@"**\*");
+            List<string> files = (await fs.GetFoldersAsync()).ToList();
+
+            Assert.That(files.Count, Is.EqualTo(2));
+            Assert.That(files, Has.Member(folderNameToFind3));
+            Assert.That(files, Has.Member(folderNameToFind4));
         }
     }
 }

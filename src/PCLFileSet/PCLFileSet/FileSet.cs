@@ -62,6 +62,8 @@ namespace PCLFileSet
             var includeRegexList = this.IncludePaths.SelectMany(p => this.BuildPathMatchRegexes(p)).ToList();
             var excludeRegexList = this.ExcludePaths.SelectMany(p => this.BuildPathMatchRegexes(p)).ToList();
 
+            //var fileList = (await this.EnumerateFilesAsync()).ToList();
+            //return fileList
             return (await this.EnumerateFilesAsync())
                 .Where(filePath => includeRegexList.Any(includeRegex => includeRegex.IsMatch(filePath)))
                 .Where(filePath => !excludeRegexList.Any(excludeRegex => excludeRegex.IsMatch(filePath)));
@@ -72,6 +74,8 @@ namespace PCLFileSet
             var includeRegexList = this.IncludePaths.SelectMany(p => this.BuildPathMatchRegexes(p)).ToList();
             var excludeRegexList = this.ExcludePaths.SelectMany(p => this.BuildPathMatchRegexes(p)).ToList();
 
+            //var folderList = (await this.EnumerateFoldersAsync()).ToList();
+            //return folderList
             return (await this.EnumerateFoldersAsync())
                 .Where(folderPath => includeRegexList.Any(includeRegex => includeRegex.IsMatch(folderPath)))
                 .Where(folderPath => !excludeRegexList.Any(excludeRegex => excludeRegex.IsMatch(folderPath)));
@@ -83,9 +87,8 @@ namespace PCLFileSet
             var excludeRegexList = this.ExcludePaths.SelectMany(p => this.BuildPathMatchRegexes(p)).ToList();
 
             return (await this.GetAllFilesAsObservableAsync())
-                .Where(file => includeRegexList.Any(includeRegex => includeRegex.IsMatch(file.Path)))
-                .Where(file => !excludeRegexList.Any(excludeRegex => excludeRegex.IsMatch(file.Path)))
-                .Select(file => file.Path);
+                .Where(filePath => includeRegexList.Any(includeRegex => includeRegex.IsMatch(filePath)))
+                .Where(filePath => !excludeRegexList.Any(excludeRegex => excludeRegex.IsMatch(filePath)));
         }
 
         public async Task<IObservable<string>> GetFoldersAsObservableAsync()
@@ -94,59 +97,88 @@ namespace PCLFileSet
             var excludeRegexList = this.ExcludePaths.SelectMany(p => this.BuildPathMatchRegexes(p)).ToList();
 
             return (await this.GetAllFoldersAsObservableAsync())
-                .Where(folder => includeRegexList.Any(includeRegex => includeRegex.IsMatch(folder.Path)))
-                .Where(folder => !excludeRegexList.Any(excludeRegex => excludeRegex.IsMatch(folder.Path)))
-                .Select(folder => folder.Path);
+                .Where(folderPath => includeRegexList.Any(includeRegex => includeRegex.IsMatch(folderPath)))
+                .Where(folderPath => !excludeRegexList.Any(excludeRegex => excludeRegex.IsMatch(folderPath)));
         }
 
         private async Task<IEnumerable<string>> EnumerateFilesAsync()
         {
-            return (await this.GetAllFilesAsObservableAsync()).ToEnumerable().Select(x => x.Path);
+            return (await this.GetAllFilesAsObservableAsync()).ToEnumerable();
         }
 
         private async Task<IEnumerable<string>> EnumerateFoldersAsync()
         {
-            return (await this.GetAllFoldersAsObservableAsync()).ToEnumerable().Select(x => x.Path);
+            return (await this.GetAllFoldersAsObservableAsync()).ToEnumerable();
         }
 
-        private async Task<IObservable<IFile>> GetAllFilesAsObservableAsync()
+        private async Task<IObservable<string>> GetAllFilesAsObservableAsync()
         {
-            IFolder folder = await this.FileSystem.GetFolderFromPathAsync(this.BasePath);
+            IFolder baseFolder = await this.FileSystem.GetFolderFromPathAsync(this.BasePath);
             
-            return Observable.Create(async (IObserver<IFile> observer) =>
+            return Observable.Create(async (IObserver<string> observer) =>
             {
-                await this.PostSubfolderFilesToObserverAsync(observer, folder);
+                await this.PostSubfolderFilesToObserverAsync(observer, baseFolder, baseFolder);
                 observer.OnCompleted();
             });
         }
 
-        private async Task PostSubfolderFilesToObserverAsync(IObserver<IFile> observer, IFolder folder)
+        private async Task PostSubfolderFilesToObserverAsync(IObserver<string> observer, IFolder folder, IFolder baseFolder)
         {
+            string folderRelativePath = this.BuildRelativePathFromBaseFolder(baseFolder, folder);
+
             foreach (IFile file in await folder.GetFilesAsync())
-                observer.OnNext(file);
+                observer.OnNext(folderRelativePath.Length == 0 ? file.Name : string.Join(this.PreferredPathSeparator, folderRelativePath, file.Name));
 
             foreach (IFolder subfolder in await folder.GetFoldersAsync())
-                await this.PostSubfolderFilesToObserverAsync(observer, subfolder);
+                await this.PostSubfolderFilesToObserverAsync(observer, subfolder, baseFolder);
         }
 
-        private async Task<IObservable<IFolder>> GetAllFoldersAsObservableAsync()
+        private async Task<IObservable<string>> GetAllFoldersAsObservableAsync()
         {
-            IFolder folder = await this.FileSystem.GetFolderFromPathAsync(this.BasePath);
+            IFolder baseFolder = await this.FileSystem.GetFolderFromPathAsync(this.BasePath);
 
-            return Observable.Create(async (IObserver<IFolder> observer) =>
+            return Observable.Create(async (IObserver<string> observer) =>
             {
-                await this.PostSubfoldersToObserverAsync(observer, folder);
+                await this.PostSubfoldersToObserverAsync(observer, baseFolder, baseFolder);
                 observer.OnCompleted();
             });
         }
 
-        private async Task PostSubfoldersToObserverAsync(IObserver<IFolder> observer, IFolder folder)
+        private async Task PostSubfoldersToObserverAsync(IObserver<string> observer, IFolder folder, IFolder baseFolder)
         {
             foreach (IFolder subfolder in await folder.GetFoldersAsync())
             {
-                observer.OnNext(subfolder);
-                await this.PostSubfoldersToObserverAsync(observer, subfolder);
+                observer.OnNext(this.BuildRelativePathFromBaseFolder(baseFolder, subfolder));
+                await this.PostSubfoldersToObserverAsync(observer, subfolder, baseFolder);
             }
+        }
+
+        private string BuildRelativePathFromBaseFolder(IFolder baseFolder, IFolder folder)
+        {
+            string[] baseFolderPathSegments = this.SplitFolderPathIntoSegments(baseFolder);
+            string[] pathSegments = this.SplitFolderPathIntoSegments(folder);
+
+            StringComparer segmentNameComparer = this._isCaseSensitive
+                ? StringComparer.CurrentCulture
+                : StringComparer.CurrentCultureIgnoreCase;
+#if DEBUG
+            for (int i = 0; i < baseFolderPathSegments.Length; i++)
+            {
+                if (segmentNameComparer.Compare(baseFolderPathSegments[i], pathSegments[i]) != 0)
+                    throw new ArgumentException("Passed base folder is not a base folder of the referenced folder.");
+            }
+#endif
+            if (pathSegments.Length <= baseFolderPathSegments.Length)
+                return string.Empty;
+
+            return string.Join(this.PreferredPathSeparator, pathSegments.Skip(baseFolderPathSegments.Length));
+        }
+
+        private string[] SplitFolderPathIntoSegments(IFolder folder)
+        {
+            if (folder.Path == null)
+                return new string[0];
+            return folder.Path.Split(new[] { this.PreferredPathSeparator }, StringSplitOptions.None);
         }
 
         private string GetPathWithPreferredSeparator(string path)

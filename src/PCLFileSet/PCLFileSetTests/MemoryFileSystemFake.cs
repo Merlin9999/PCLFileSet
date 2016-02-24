@@ -44,19 +44,37 @@ namespace PCLFileSetTests
 
         public void AddFiles(params string[] filePaths)
         {
+            AddFilesAndFolders(filePaths, new string[] {});
+        }
+
+        public void AddFilesAndFolders(string[] filePaths, string[] folderPaths)
+        {
             foreach (string filePath in filePaths)
             {
                 string folderPath = this.GetFolderPath(filePath);
                 MemoryFolderFake folder = this.FindFolder(folderPath, createIfDoesNotExist: true);
                 folder.Files.Add(this.GetFileName(filePath));
             }
+
+            foreach (string folderPath in folderPaths)
+            {
+                this.FindFolder(folderPath, createIfDoesNotExist: true);
+            }
         }
+
 
         public void AddFiles(Func<IAddFolderEntry, IAddFolderEntry> folderEntryAdderFunc)
         {
             var addFolderEntryImpl = new AddFolderEntryImpl(this);
             folderEntryAdderFunc(addFolderEntryImpl);
             this.AddFiles(addFolderEntryImpl.GetFilePaths());
+        }
+
+        public void AddFilesAndFolders(Func<IAddFolderEntry, IAddFolderEntry> folderEntryAdderFunc)
+        {
+            var addFolderEntryImpl = new AddFolderEntryImpl(this);
+            folderEntryAdderFunc(addFolderEntryImpl);
+            this.AddFilesAndFolders(addFolderEntryImpl.GetFilePaths(), addFolderEntryImpl.GetFolderPaths());
         }
 
         public async Task<IFile> GetFileFromPathAsync(string path, CancellationToken cancellationToken = new CancellationToken())

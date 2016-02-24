@@ -17,7 +17,7 @@ namespace PCLFileSetTests
         public MemoryFileFake(MemoryFileSystemFake fileSys, string filePath)
         {
             this._fileSys = fileSys;
-            this.Name = this._fileSys.GetFolderPath(filePath);
+            this.Name = this._fileSys.GetFileName(filePath);
             this.Path = filePath;
         }
 
