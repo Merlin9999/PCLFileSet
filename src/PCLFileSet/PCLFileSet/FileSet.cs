@@ -25,6 +25,38 @@ namespace PCLFileSet
         public readonly IFileSystem FileSystem;
         public readonly string BasePath;
 
+        public static async Task<IEnumerable<string>> GetFilesAsync(IFileSystem fileSystem, 
+            string globPath, string basePath = null)
+        {
+            var fileSet = new FileSet(fileSystem, basePath: basePath);
+            fileSet.Include(globPath);
+            return await fileSet.GetFilesAsync();
+        }
+
+        public static async Task<IObservable<string>> GetFilesAsObservableAsync(IFileSystem fileSystem,
+            string globPath, string basePath = null)
+        {
+            var fileSet = new FileSet(fileSystem, basePath: basePath);
+            fileSet.Include(globPath);
+            return await fileSet.GetFilesAsObservableAsync();
+        }
+
+        public static async Task<IEnumerable<string>> GetFoldersAsync(IFileSystem fileSystem,
+            string globPath, string basePath = null)
+        {
+            var fileSet = new FileSet(fileSystem, basePath: basePath);
+            fileSet.Include(globPath);
+            return await fileSet.GetFoldersAsync();
+        }
+
+        public static async Task<IObservable<string>> GetFoldersAsObservableAsync(IFileSystem fileSystem,
+            string globPath, string basePath = null)
+        {
+            var fileSet = new FileSet(fileSystem, basePath: basePath);
+            fileSet.Include(globPath);
+            return await fileSet.GetFoldersAsObservableAsync();
+        }
+
         public FileSet(IFileSystem fileSystem, string basePath = null, bool isCaseSensitive = false)
         {
             this._isCaseSensitive = isCaseSensitive;

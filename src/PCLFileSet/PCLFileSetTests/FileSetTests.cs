@@ -181,8 +181,7 @@ namespace PCLFileSetTests
                     ValidateFileSetForMultipleIncludesAndAnExclusions(files, 
                         filePathToFind1, filePathToFind2, filePathNotFound1, filePathNotFound2);
                 })
-                .Subscribe(
-                    filePath => files.Add(filePath));
+                .Subscribe(filePath => files.Add(filePath));
         }
 
         private static FileSet CreateFileSetForMultipleIncludesAndAnExclusions(
@@ -305,5 +304,401 @@ namespace PCLFileSetTests
             Assert.That(files, Has.Member(folderNameToFind3));
             Assert.That(files, Has.Member(folderNameToFind4));
         }
+
+        [Test]
+        public async Task MatchOnFolderAfterStarStarWithFolderMatchOnStar()
+        {
+            var sys = new MemoryFileSystemFake();
+            const string folderToMatchOn = "FolderToMatchOn";
+            const string foundFileName1 = "IncludedFile1.txt";
+            const string foundFileName2 = "IncludedFile2.txt";
+            const string foundFileName3 = "IncludedFile3.txt";
+            string foundFilePath1 = PortablePath.Combine("B", "C", folderToMatchOn, "MatchByStar1", foundFileName1);
+            string foundFilePath2 = PortablePath.Combine("B", "C", folderToMatchOn, "MatchByStar1", foundFileName2);
+            string foundFilePath3 = PortablePath.Combine("B", "C", folderToMatchOn, "MatchByStar2", foundFileName3);
+            sys.AddFilesAndFolders(x => x
+                .Folder("A", a => a
+                    .File("ExcludedFile.txt"))
+                .Folder("B", b => b
+                    .File("ExcludedFile.txt")
+                    .Folder("C", c => c
+                        .Folder(folderToMatchOn, d => d
+                            .File("ExcludedFile.txt")
+                            .Folder("MatchByStar1", e => e
+                                .File(foundFileName1)
+                                .File(foundFileName2)
+                                .Folder("ExcludedFolder", f => f
+                                    .File("ExcludedFile.txt")))
+                            .Folder("MatchByStar2", f => f
+                                .File(foundFileName3))
+                            .File("AnotherExcludedFile.txt")
+                        )))
+                .Folder("Z", z => z
+                    .File("ExcludedFile.txt")));
+            var fs = new FileSet(sys, "/");
+            fs.Include(@"**\" + folderToMatchOn + @"\*\*");
+            List<string> files = (await fs.GetFilesAsync()).ToList();
+
+            Assert.That(files.Count, Is.EqualTo(3));
+            Assert.That(files, Has.Member(foundFilePath1));
+            Assert.That(files, Has.Member(foundFilePath2));
+            Assert.That(files, Has.Member(foundFilePath3));
+        }
+
+        [Test]
+        public async Task MatchOnFolderAfterStarStarWithAnotherStarStar()
+        {
+            var sys = new MemoryFileSystemFake();
+            const string folderToMatchOn = "FolderToMatchOn";
+            const string foundFileName1 = "IncludedFile.1zz";
+            const string foundFileName2 = "IncludedFile.2zz";
+            const string foundFileName3 = "IncludedFile.3zz";
+            const string foundFileName4 = "IncludedFile.4zz";
+            string foundFilePath1 = PortablePath.Combine("B", "C", folderToMatchOn, foundFileName1);
+            string foundFilePath2 = PortablePath.Combine("B", "C", folderToMatchOn, "D", foundFileName2);
+            string foundFilePath3 = PortablePath.Combine("B", "C", folderToMatchOn, "D", "E", foundFileName3);
+            string foundFilePath4 = PortablePath.Combine("B", "C", folderToMatchOn, "F", foundFileName4);
+            sys.AddFilesAndFolders(x => x
+                .Folder("A", a => a
+                    .File("ExcludedFile.txt"))
+                .Folder("B", b => b
+                    .File("ExcludedFile.xzz")
+                    .Folder("C", c => c
+                        .Folder(folderToMatchOn, d => d
+                            .File(foundFileName1)
+                            .Folder("D", e => e
+                                .File("ExcludedFile.a1z")
+                                .File(foundFileName2)
+                                .Folder("E", f => f
+                                    .File(foundFileName3)))
+                            .Folder("F", f => f
+                                .File("ExcludedFile.txt")
+                                .File(foundFileName4))
+                            .File("AnotherExcludedFile.txt")
+                        )))
+                .Folder("Z", z => z
+                    .File("ExcludedFile.txt")));
+            var fs = new FileSet(sys, "/");
+            fs.Include(@"**\" + folderToMatchOn + @"\**\*.?zz");
+            List<string> files = (await fs.GetFilesAsync()).ToList();
+
+            Assert.That(files.Count, Is.EqualTo(4));
+            Assert.That(files, Has.Member(foundFilePath1));
+            Assert.That(files, Has.Member(foundFilePath2));
+            Assert.That(files, Has.Member(foundFilePath3));
+            Assert.That(files, Has.Member(foundFilePath4));
+        }
+
+        [Test]
+        public async Task CaseInsensativeFileMatch()
+        {
+            var sys = new MemoryFileSystemFake();
+            const string foundFileName = "IncludedFile.txt";
+            string foundFilePath2 = PortablePath.Combine("A", foundFileName);
+            string foundFilePath3 = PortablePath.Combine("B", foundFileName);
+            string foundFilePath4 = PortablePath.Combine("B", "C", foundFileName);
+            sys.AddFilesAndFolders(x => x
+                .File(foundFileName)
+                .Folder("A", a => a
+                    .File("ExcludedFile.txt")
+                    .File(foundFileName))
+                .Folder("B", b => b
+                    .File(foundFileName)
+                    .File("ExcludedFile.txt")
+                    .Folder("C", c => c
+                        .File(foundFileName)
+                        .File("ExcludedFile.txt")
+                    ))
+                .Folder("Z", z => z
+                    .File("ExcludedFile.txt")));
+            var fs = new FileSet(sys, "/");
+            fs.Include(@"**\" + foundFileName.ToLower());
+            List<string> files = (await fs.GetFilesAsync()).ToList();
+
+            Assert.That(files.Count, Is.EqualTo(4));
+            Assert.That(files, Has.Member(foundFileName));
+            Assert.That(files, Has.Member(foundFilePath2));
+            Assert.That(files, Has.Member(foundFilePath3));
+            Assert.That(files, Has.Member(foundFilePath4));
+        }
+
+        [Test]
+        public async Task CaseInsensativeFolderMatchGettingFiles()
+        {
+            var sys = new MemoryFileSystemFake();
+            const string foundFileName = "IncludedFile.Txt";
+            string foundFilePath1 = PortablePath.Combine("A", "zxcASDFqwe", foundFileName);
+            string foundFilePath2 = PortablePath.Combine("A", "qweASDFzxc", foundFileName);
+            string foundFilePath3 = PortablePath.Combine("C", "zxcASDFqwe", foundFileName);
+            string foundFilePath4 = PortablePath.Combine("C", "zxcASDFqwe", "zzzASDFzzz", foundFileName);
+            string foundFilePath5 = PortablePath.Combine("C", "zxcASDFqwe", "qweASDFzxc", foundFileName);
+            sys.AddFilesAndFolders(x => x
+                .File(foundFileName)
+                .Folder("A", a => a
+                    .File(foundFileName)
+                    .Folder("zxcASDFqwe", zxc => zxc
+                        .File(foundFileName))
+                    .Folder("B", b => b
+                        .File(foundFileName))
+                    .Folder("qweASDFzxc", qwe => qwe
+                        .File(foundFileName)))
+                .Folder("C", c => c
+                    .File(foundFileName)
+                    .Folder("zxcASDFqwe", zxc => zxc
+                        .File(foundFileName)
+                        .Folder("zzzASDFzzz", zzz => zzz
+                            .File(foundFileName))
+                        .Folder("D", d => d
+                            .File(foundFileName))
+                        .Folder("qweASDFzxc", qwe => qwe
+                            .File(foundFileName))))
+                .Folder("Z", z => z
+                    .File("ExcludedFile.txt")));
+            var fs = new FileSet(sys, "/");
+            fs.Include(@"**\*asdf*\" + foundFileName.ToLower());
+            List<string> files = (await fs.GetFilesAsync()).ToList();
+
+            Assert.That(files.Count, Is.EqualTo(5));
+            Assert.That(files, Has.Member(foundFilePath1));
+            Assert.That(files, Has.Member(foundFilePath2));
+            Assert.That(files, Has.Member(foundFilePath3));
+            Assert.That(files, Has.Member(foundFilePath4));
+            Assert.That(files, Has.Member(foundFilePath5));
+        }
+
+        [Test]
+        public async Task CaseInsensativeFolderMatchGettingFolders()
+        {
+            var sys = new MemoryFileSystemFake();
+            const string ignoredFileName = "IncludedFile.Txt";
+            string foundFolderPath1 = PortablePath.Combine("A", "zxcASDFqwe");
+            string foundFolderPath2 = PortablePath.Combine("A", "qweASDFzxc");
+            string foundFolderPath3 = PortablePath.Combine("C", "zxcASDFqwe");
+            string foundFolderPath4 = PortablePath.Combine("C", "zxcASDFqwe", "zzzASDFzzz");
+            string foundFolderPath5 = PortablePath.Combine("C", "zxcASDFqwe", "qweASDFzxc");
+            sys.AddFilesAndFolders(x => x
+                .File(ignoredFileName)
+                .Folder("A", a => a
+                    .File(ignoredFileName)
+                    .Folder("zxcASDFqwe", zxc => zxc
+                        .File(ignoredFileName))
+                    .Folder("B", b => b
+                        .File(ignoredFileName))
+                    .Folder("qweASDFzxc", qwe => qwe
+                        .File(ignoredFileName)))
+                .Folder("C", c => c
+                    .File(ignoredFileName)
+                    .Folder("zxcASDFqwe", zxc => zxc
+                        .File(ignoredFileName)
+                        .Folder("zzzASDFzzz", zzz => zzz
+                            .File(ignoredFileName))
+                        .Folder("D", d => d
+                            .File(ignoredFileName))
+                        .Folder("qweASDFzxc", qwe => qwe
+                            .File(ignoredFileName))))
+                .Folder("Z", z => z
+                    .File("ExcludedFile.txt")));
+            var fs = new FileSet(sys, "/");
+            fs.Include(@"**\*asdf*");
+            List<string> folders = (await fs.GetFoldersAsync()).ToList();
+
+            Assert.That(folders.Count, Is.EqualTo(5));
+            Assert.That(folders, Has.Member(foundFolderPath1));
+            Assert.That(folders, Has.Member(foundFolderPath2));
+            Assert.That(folders, Has.Member(foundFolderPath3));
+            Assert.That(folders, Has.Member(foundFolderPath4));
+            Assert.That(folders, Has.Member(foundFolderPath5));
+        }
+
+        [Test]
+        public async Task BasePathSupportsDotDotAndDotFolders()
+        {
+            var sys = new MemoryFileSystemFake();
+            const string foundFileName = "IncludedFile.Txt";
+            sys.AddFilesAndFolders(x => x
+                .File(foundFileName)
+                .Folder("A", a => a
+                    .File(foundFileName)
+                    .Folder("B", b => b
+                        .File(foundFileName))
+                    .Folder("C", c => c
+                        .File(foundFileName)))
+                .Folder("D", d => d
+                    .File(foundFileName)
+                    .Folder("E", e => e
+                        .File(foundFileName))
+                    .Folder("F", f => f
+                        .File(foundFileName)))
+                .Folder("G", g => g
+                    .File(foundFileName)));
+            var fs1 = new FileSet(sys, @"A\C\..\B\..\..\.\D\E\.\..\.\F");
+            fs1.Include(@"*");
+            List<string> files = (await fs1.GetFilesAsync()).ToList();
+
+            Assert.That(files.Count, Is.EqualTo(1));
+            Assert.That(files, Has.Member(foundFileName));
+
+            string foundFilePath1 = PortablePath.Combine("E", foundFileName);
+            string foundFilePath2 = PortablePath.Combine("F", foundFileName);
+            var fs2 = new FileSet(sys, @"A\C\..\B\..\..\.\D\E\.\..\.");
+            fs2.Include(@"*\*");
+            files = (await fs2.GetFilesAsync()).ToList();
+
+            Assert.That(files.Count, Is.EqualTo(2));
+            Assert.That(files, Has.Member(foundFilePath1));
+            Assert.That(files, Has.Member(foundFilePath2));
+        }
+
+        [Test]
+        public async Task GetFilesStaticMethod()
+        {
+            var sys = new MemoryFileSystemFake();
+            const string foundFileName = "IncludedFile.Txt";
+            string foundFilePath2 = PortablePath.Combine("A", foundFileName);
+            string foundFilePath3 = PortablePath.Combine("A", "B", foundFileName);
+            string foundFilePath4 = PortablePath.Combine("A", "C", foundFileName);
+            sys.AddFilesAndFolders(x => x
+                .File(foundFileName)
+                .Folder("A", a => a
+                    .File(foundFileName)
+                    .Folder("B", b => b
+                        .File(foundFileName))
+                    .Folder("C", c => c
+                        .File(foundFileName))));
+
+            List<string> files = (await FileSet.GetFilesAsync(sys, @"**\*")).ToList();
+
+            Assert.That(files.Count, Is.EqualTo(4));
+            Assert.That(files, Has.Member(foundFileName));
+            Assert.That(files, Has.Member(foundFilePath2));
+            Assert.That(files, Has.Member(foundFilePath3));
+            Assert.That(files, Has.Member(foundFilePath4));
+        }
+
+        [Test]
+        public async Task GetFilesWithBaseFolderStaticMethod()
+        {
+            var sys = new MemoryFileSystemFake();
+            const string foundFileName = "IncludedFile.Txt";
+            string foundFilePath2 = PortablePath.Combine("B", foundFileName);
+            string foundFilePath3 = PortablePath.Combine("C", foundFileName);
+            sys.AddFilesAndFolders(x => x
+                .File(foundFileName)
+                .Folder("A", a => a
+                    .File(foundFileName)
+                    .Folder("B", b => b
+                        .File(foundFileName))
+                    .Folder("C", c => c
+                        .File(foundFileName))));
+
+            List<string> files = (await FileSet.GetFilesAsync(sys, @"**\*", basePath: @"\A")).ToList();
+
+            Assert.That(files.Count, Is.EqualTo(3));
+            Assert.That(files, Has.Member(foundFileName));
+            Assert.That(files, Has.Member(foundFilePath2));
+            Assert.That(files, Has.Member(foundFilePath3));
+        }
+
+        [Test]
+        public async Task GetFilesAsObservableStaticMethod()
+        {
+            var sys = new MemoryFileSystemFake();
+            const string foundFileName = "IncludedFile.Txt";
+            string foundFilePath2 = PortablePath.Combine("A", foundFileName);
+            string foundFilePath3 = PortablePath.Combine("A", "B", foundFileName);
+            string foundFilePath4 = PortablePath.Combine("A", "C", foundFileName);
+            sys.AddFilesAndFolders(x => x
+                .File(foundFileName)
+                .Folder("A", a => a
+                    .File(foundFileName)
+                    .Folder("B", b => b
+                        .File(foundFileName))
+                    .Folder("C", c => c
+                        .File(foundFileName))));
+
+            IObservable<string> filesObservable = await FileSet.GetFilesAsObservableAsync(sys, @"**\*");
+            List<string> files = new List<string>();
+
+            filesObservable
+                .Finally(() =>
+                {
+                    Assert.That(files.Count, Is.EqualTo(4));
+                    Assert.That(files, Has.Member(foundFileName));
+                    Assert.That(files, Has.Member(foundFilePath2));
+                    Assert.That(files, Has.Member(foundFilePath3));
+                    Assert.That(files, Has.Member(foundFilePath4));
+                })
+                .Subscribe(filePath => files.Add(filePath));
+        }
+
+        [Test]
+        public async Task GetFoldersStaticMethod()
+        {
+            var sys = new MemoryFileSystemFake();
+            string foundFilePath1 = PortablePath.Combine("A");
+            string foundFilePath2 = PortablePath.Combine("A", "B");
+            string foundFilePath3 = PortablePath.Combine("A", "C");
+            sys.AddFilesAndFolders(x => x
+                .Folder("A", a => a
+                    .Folder("B", b => b)
+                    .Folder("C", c => c)));
+
+            List<string> files = (await FileSet.GetFoldersAsync(sys, @"**\*")).ToList();
+
+            Assert.That(files.Count, Is.EqualTo(3));
+            Assert.That(files, Has.Member(foundFilePath1));
+            Assert.That(files, Has.Member(foundFilePath2));
+            Assert.That(files, Has.Member(foundFilePath3));
+        }
+
+        [Test]
+        public async Task GetFoldersWithBaseFolderStaticMethod()
+        {
+            var sys = new MemoryFileSystemFake();
+            string foundFilePath1 = PortablePath.Combine("B");
+            string foundFilePath2 = PortablePath.Combine("C");
+            sys.AddFilesAndFolders(x => x
+                .Folder("A", a => a
+                    .Folder("B", b => b)
+                    .Folder("C", c => c)));
+
+            List<string> files = (await FileSet.GetFoldersAsync(sys, @"**\*", basePath: @"\A")).ToList();
+
+            Assert.That(files.Count, Is.EqualTo(2));
+            Assert.That(files, Has.Member(foundFilePath1));
+            Assert.That(files, Has.Member(foundFilePath2));
+        }
+
+        [Test]
+        public async Task GetFoldersAsObservableStaticMethod()
+        {
+            var sys = new MemoryFileSystemFake();
+            string foundFilePath1 = PortablePath.Combine("A");
+            string foundFilePath2 = PortablePath.Combine("A", "B");
+            string foundFilePath3 = PortablePath.Combine("A", "C");
+            sys.AddFilesAndFolders(x => x
+                .Folder("A", a => a
+                    .Folder("B", b => b)
+                    .Folder("C", c => c)));
+
+            IObservable<string> filesObservable = await FileSet.GetFoldersAsObservableAsync(sys, @"**\*");
+            List<string> files = new List<string>();
+
+            filesObservable
+                .Finally(() =>
+                {
+                    Assert.That(files.Count, Is.EqualTo(3));
+                    Assert.That(files, Has.Member(foundFilePath1));
+                    Assert.That(files, Has.Member(foundFilePath2));
+                    Assert.That(files, Has.Member(foundFilePath3));
+                })
+                .Subscribe(filePath => files.Add(filePath));
+        }
+
+
+
+
+
+
     }
 }
