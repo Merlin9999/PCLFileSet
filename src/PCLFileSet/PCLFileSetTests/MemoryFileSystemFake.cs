@@ -77,6 +77,8 @@ namespace PCLFileSetTests
             this.AddFilesAndFolders(addFolderEntryImpl.GetFilePaths(), addFolderEntryImpl.GetFolderPaths());
         }
 
+#pragma warning disable CS1998 // Async methods lacks 'await' operators and will run synchronously
+
         public async Task<IFile> GetFileFromPathAsync(string path, CancellationToken cancellationToken = new CancellationToken())
         {
             string folderPath = this.GetFolderPath(path);
@@ -97,6 +99,8 @@ namespace PCLFileSetTests
         {
             return this.FindFolder(path);
         }
+
+#pragma warning restore CS1998 // Async methods lacks 'await' operators and will run synchronously
 
         public bool IsPathRooted(string path)
         {
