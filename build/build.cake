@@ -11,6 +11,7 @@ var configuration = Argument<string>("configuration", "Release");
 
 var solutions = GetFiles("./../src/**/*.sln");
 var solutionPaths = solutions.Select(solution => solution.GetDirectory());
+var nugetPath = "../nuget";
 
 ///////////////////////////////////////////////////////////////////////////////
 // SETUP / TEARDOWN
@@ -42,6 +43,8 @@ Task("Clean")
         CleanDirectories(path + "/**/bin/" + configuration);
         CleanDirectories(path + "/**/obj/" + configuration);
     }
+    
+    CleanDirectories(nugetPath);
 });
 
 Task("Restore")
@@ -82,12 +85,28 @@ Task("Run-Unit-Tests")
         });
 });
 
+Task("NuGetPack")
+    .IsDependentOn("Build")
+    .Does(() =>
+{
+    if (!DirectoryExists(nugetPath))
+        CreateDirectory(nugetPath);
+
+    var nuGetPackSettings   = new NuGetPackSettings 
+    {
+        OutputDirectory         = "../nuget"
+    };
+            
+    NuGetPack("../src/PCLFileSet/PCLFileSet/PCLFileSet.csproj", nuGetPackSettings);        
+});
+
 ///////////////////////////////////////////////////////////////////////////////
 // TARGETS
 ///////////////////////////////////////////////////////////////////////////////
 
 Task("Default")
-    .IsDependentOn("Run-Unit-Tests");
+    .IsDependentOn("Run-Unit-Tests")
+    .IsDependentOn("NuGetPack");
 
 ///////////////////////////////////////////////////////////////////////////////
 // EXECUTION
