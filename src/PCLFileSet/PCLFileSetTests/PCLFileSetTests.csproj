@@ -68,6 +68,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Shared\SharedAssemblyInfo.cs">
+      <Link>SharedAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="AddFolderEntryImpl.cs" />
     <Compile Include="FileSetTests.cs" />
     <Compile Include="IAddFolderEntry.cs" />
