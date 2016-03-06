@@ -61,7 +61,6 @@ namespace PCLFileSet
         {
             this._isCaseSensitive = isCaseSensitive;
             this.FileSystem = fileSystem;
-            this.BasePath = basePath ?? string.Empty;
             this.IncludePaths = new List<string>();
             this.ExcludePaths = new List<string>();
 
@@ -73,6 +72,8 @@ namespace PCLFileSet
 
             separatorHashSet.Remove(this.PreferredPathSeparator);
             this._alternatePathSeparators = separatorHashSet.ToArray();
+
+            this.BasePath = this.GetPathWithPreferredSeparator(basePath ?? ".");
         }
 
         public IFileSet Include(string globPath)
@@ -190,9 +191,7 @@ namespace PCLFileSet
             string[] baseFolderPathSegments = this.SplitFolderPathIntoSegments(baseFolder);
             string[] pathSegments = this.SplitFolderPathIntoSegments(folder);
 
-            StringComparer segmentNameComparer = this._isCaseSensitive
-                ? StringComparer.CurrentCulture
-                : StringComparer.CurrentCultureIgnoreCase;
+            StringComparer segmentNameComparer = this.GetNameComparer();
 #if DEBUG
             for (int i = 0; i < baseFolderPathSegments.Length; i++)
             {
@@ -206,11 +205,48 @@ namespace PCLFileSet
             return string.Join(this.PreferredPathSeparator, pathSegments.Skip(baseFolderPathSegments.Length));
         }
 
+        private StringComparer GetNameComparer()
+        {
+            return this._isCaseSensitive
+                ? StringComparer.CurrentCulture
+                : StringComparer.CurrentCultureIgnoreCase;
+        }
+
+        private StringComparison GetNameComparison()
+        {
+            return this._isCaseSensitive
+                ? StringComparison.CurrentCulture
+                : StringComparison.CurrentCultureIgnoreCase;
+        }
+
         private string[] SplitFolderPathIntoSegments(IFolder folder)
         {
             if (folder.Path == null)
                 return new string[0];
-            return folder.Path.Split(new[] { this.PreferredPathSeparator }, StringSplitOptions.None);
+
+            return this.TrimSeparatorsFromEnd(folder.Path)
+                .Split(new[] {this.PreferredPathSeparator}, StringSplitOptions.None);
+        }
+
+        private string TrimSeparatorsFromEnd(string path)
+        {
+            bool found;
+            StringComparer nameComparer = this.GetNameComparer();
+
+            do
+            {
+                found = false;
+                foreach (string pathSeparator in this.PathSeparators)
+                {
+                    if (path.EndsWith(pathSeparator, this.GetNameComparison()))
+                    {
+                        path = path.Substring(0, path.Length - pathSeparator.Length);
+                        found = true;
+                    }
+                }
+            } while (found);
+
+            return path;
         }
 
         private string GetPathWithPreferredSeparator(string path)

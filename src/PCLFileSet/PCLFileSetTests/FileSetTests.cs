@@ -51,13 +51,37 @@ namespace PCLFileSetTests
                         .File(fileNameToFind)))
                 .Folder("c", c => c
                     .File("FileInFolder.txt")));
-            var fs = new FileSet(sys, "/" + "a");
+            var fs = new FileSet(sys, "/a");
             fs.Include(PortablePath.Combine("b", "*"));
             List<string> files = (await fs.GetFilesAsync()).ToList();
 
             Assert.That(files.Count, Is.EqualTo(1));
             Assert.That(files, Has.Member(filePathToFind));
         }
+
+        [Test]
+        public async Task IncludeAllFilesInSubFolderWithBaseFolderEndingInSeparatorChar()
+        {
+            var sys = new MemoryFileSystemFake();
+            const string fileNameToFind = "FileInSubFolder.txt";
+            string filePathToFind = PortablePath.Combine("b", fileNameToFind);
+            sys.AddFiles(x => x
+                .File("FileInRoot.txt")
+                .Folder("a", a => a
+                    .File("FileInFolder.txt")
+                    .File("AnotherFileInFolder.txt")
+                    .Folder("b", b => b
+                        .File(fileNameToFind)))
+                .Folder("c", c => c
+                    .File("FileInFolder.txt")));
+            var fs = new FileSet(sys, "/a/");
+            fs.Include(PortablePath.Combine("b", "*"));
+            List<string> files = (await fs.GetFilesAsync()).ToList();
+
+            Assert.That(files.Count, Is.EqualTo(1));
+            Assert.That(files, Has.Member(filePathToFind));
+        }
+
 
         [Test]
         public async Task IncludeFolderFilesAndSubFolderFiles()
@@ -390,7 +414,7 @@ namespace PCLFileSetTests
         }
 
         [Test]
-        public async Task CaseInsensativeFileMatch()
+        public async Task CaseInsensitiveFileMatch()
         {
             var sys = new MemoryFileSystemFake();
             const string foundFileName = "IncludedFile.txt";
@@ -423,7 +447,7 @@ namespace PCLFileSetTests
         }
 
         [Test]
-        public async Task CaseInsensativeFolderMatchGettingFiles()
+        public async Task CaseInsensitiveFolderMatchGettingFiles()
         {
             var sys = new MemoryFileSystemFake();
             const string foundFileName = "IncludedFile.Txt";
@@ -467,7 +491,7 @@ namespace PCLFileSetTests
         }
 
         [Test]
-        public async Task CaseInsensativeFolderMatchGettingFolders()
+        public async Task CaseInsensitiveFolderMatchGettingFolders()
         {
             var sys = new MemoryFileSystemFake();
             const string ignoredFileName = "IncludedFile.Txt";
@@ -694,11 +718,5 @@ namespace PCLFileSetTests
                 })
                 .Subscribe(filePath => files.Add(filePath));
         }
-
-
-
-
-
-
     }
 }

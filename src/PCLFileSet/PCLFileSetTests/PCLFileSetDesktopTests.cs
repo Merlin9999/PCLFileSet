@@ -58,5 +58,23 @@ namespace PCLFileSetTests
             Assert.That(files, Has.Member(@"Folder2\SubFolder2\FileInSubFolder2.txt"));
             Assert.That(files, Has.Member(@"Folder2\SubFolder3\FileInSubFolder3.txt"));
         }
+
+        [Test]
+        public async Task GetAllFilesWithFolderEndingInSeparatorCharacter()
+        {
+            FileSet fs = new FileSet(new DesktopFileSystem(), basePath: this.TestFilesRoot + PortablePath.DirectorySeparatorChar);
+            fs.Include(@"**\*");
+            List<string> files = (await fs.GetFilesAsync()).ToList();
+
+            Assert.That(files.Count, Is.EqualTo(6));
+            Assert.That(files, Has.Member(@"FileInRoot.txt"));
+            Assert.That(files, Has.Member(@"Folder1\FileInFolder1.txt"));
+            Assert.That(files, Has.Member(@"Folder1\SubFolder1\FileInSubFolder1.txt"));
+            Assert.That(files, Has.Member(@"Folder2\FileInFolder2.txt"));
+            Assert.That(files, Has.Member(@"Folder2\SubFolder2\FileInSubFolder2.txt"));
+            Assert.That(files, Has.Member(@"Folder2\SubFolder3\FileInSubFolder3.txt"));
+        }
+
+
     }
 }
