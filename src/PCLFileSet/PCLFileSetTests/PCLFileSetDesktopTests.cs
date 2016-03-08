@@ -134,5 +134,23 @@ namespace PCLFileSetTests
 
             (await fs.GetFoldersAsync()).ToList();
         }
+
+        [Test]
+        public async Task SpecifyInvalidBasePathIteratingFiles()
+        {
+            FileSet fs = new FileSet(new DesktopFileSystem(), "./DoesNotExist");
+            fs.Include("**/*");
+
+            Assert.That(async () => (await fs.GetFilesAsync()).ToList(), Throws.TypeOf<InvalidOperationException>());
+        }
+
+        [Test]
+        public async Task SpecifyInvalidBasePathIteratingFolders()
+        {
+            FileSet fs = new FileSet(new DesktopFileSystem(), "./DoesNotExist");
+            fs.Include("**/*");
+
+            Assert.That(async () => (await fs.GetFoldersAsync()).ToList(), Throws.TypeOf<InvalidOperationException>());
+        }
     }
 }

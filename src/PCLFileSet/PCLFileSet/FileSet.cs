@@ -175,7 +175,9 @@ namespace PCLFileSet
         private async Task<IObservable<string>> GetAllFilesAsObservableAsync()
         {
             IFolder baseFolder = await this.FileSystem.GetFolderFromPathAsync(this.BasePath);
-            
+            if (baseFolder == null)
+                throw new InvalidOperationException($"Base path \"{this.BasePath}\" is not valid.");
+
             return Observable.Create(async (IObserver<string> observer) =>
             {
                 try
@@ -208,6 +210,8 @@ namespace PCLFileSet
         private async Task<IObservable<string>> GetAllFoldersAsObservableAsync()
         {
             IFolder baseFolder = await this.FileSystem.GetFolderFromPathAsync(this.BasePath);
+            if (baseFolder == null)
+                throw new InvalidOperationException($"Base path \"{this.BasePath}\" is not valid.");
 
             return Observable.Create(async (IObserver<string> observer) =>
             {

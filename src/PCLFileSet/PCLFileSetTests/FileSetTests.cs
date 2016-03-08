@@ -277,6 +277,43 @@ namespace PCLFileSetTests
         }
 
         [Test]
+        public async Task SpecifyInvalidBasePathIteratingFiles()
+        {
+            var sys = new MemoryFileSystemFake();
+            sys.AddFiles(x => x
+                .File("FileInRoot.txt")
+                .Folder("a", a => a
+                    .File("FileInFolder.txt")
+                    .File("AnotherFileInFolder.txt")
+                    .Folder("b", b => b
+                        .File("FileInSubFolder.txt")))
+                .Folder("c", c => c
+                    .File("FileInFolder.txt")));
+            var fs = new FileSet(sys, "/DoesNotExist");
+            fs.Include(@"**\*");
+
+            Assert.That(async () => (await fs.GetFilesAsync()).ToList(), Throws.TypeOf<InvalidOperationException>());
+        }
+
+        [Test]
+        public async Task SpecifyInvalidBasePathIteratingFolders()
+        {
+            var sys = new MemoryFileSystemFake();
+            sys.AddFiles(x => x
+                .File("FileInRoot.txt")
+                .Folder("a", a => a
+                    .File("FileInFolder.txt")
+                    .File("AnotherFileInFolder.txt")
+                    .Folder("b", b => b
+                        .File("FileInSubFolder.txt")))
+                .Folder("c", c => c
+                    .File("FileInFolder.txt")));
+            var fs = new FileSet(sys, "/DoesNotExist");
+            fs.Include(@"**\*");
+            Assert.That(async () => (await fs.GetFoldersAsync()).ToList(), Throws.TypeOf<InvalidOperationException>());
+        }
+
+        [Test]
         public async Task IncludeAllFoldersInTree()
         {
             var sys = new MemoryFileSystemFake();
