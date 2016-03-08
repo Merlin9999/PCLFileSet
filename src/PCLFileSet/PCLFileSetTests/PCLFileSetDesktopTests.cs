@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -75,6 +77,62 @@ namespace PCLFileSetTests
             Assert.That(files, Has.Member(@"Folder2\SubFolder3\FileInSubFolder3.txt"));
         }
 
+        [Test]
+        public async Task AccessDeniedUnhandledIteratingFiles()
+        {
+            string accessDeniedTest = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            Assert.That(accessDeniedTest, Is.Not.Empty);
 
+            FileSet fs = new FileSet(new DesktopFileSystem(), accessDeniedTest);
+            fs.Include("**/*");
+
+            Assert.That(async () => (await fs.GetFilesAsync()).ToList(), Throws.TypeOf<UnauthorizedAccessException>()); 
+        }
+
+        [Test]
+        public async Task AccessDeniedHandledIteratingFiles()
+        {
+            string accessDeniedTest = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            Assert.That(accessDeniedTest, Is.Not.Empty);
+
+            FileSet fs = new FileSet(new DesktopFileSystem(), accessDeniedTest);
+            fs.Include("**/*");
+
+            fs.Catch<UnauthorizedAccessException>(ex =>
+            {
+                // Do nothing. Ignore exception.
+            });
+
+            (await fs.GetFilesAsync()).ToList();
+        }
+
+        [Test]
+        public async Task AccessDeniedUnhandledIteratingFolders()
+        {
+            string accessDeniedTest = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            Assert.That(accessDeniedTest, Is.Not.Empty);
+
+            FileSet fs = new FileSet(new DesktopFileSystem(), accessDeniedTest);
+            fs.Include("**/*");
+
+            Assert.That(async () => (await fs.GetFoldersAsync()).ToList(), Throws.TypeOf<UnauthorizedAccessException>());
+        }
+
+        [Test]
+        public async Task AccessDeniedHandledIteratingFolders()
+        {
+            string accessDeniedTest = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            Assert.That(accessDeniedTest, Is.Not.Empty);
+
+            FileSet fs = new FileSet(new DesktopFileSystem(), accessDeniedTest);
+            fs.Include("**/*");
+
+            fs.Catch<UnauthorizedAccessException>(ex =>
+            {
+                // Do nothing. Ignore exception.
+            });
+
+            (await fs.GetFoldersAsync()).ToList();
+        }
     }
 }

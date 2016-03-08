@@ -2,10 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using PCLStorage;
 
@@ -19,6 +22,7 @@ namespace PCLFileSet
         private readonly string[] _alternatePathSeparators;
         private List<string> IncludePaths { get; }
         private List<string> ExcludePaths { get; }
+        private Dictionary<Type,List<ExceptionHandlerInfo>> ExceptionHandlers { get; }
 
         public readonly string PreferredPathSeparator;
         public readonly string[] PathSeparators;
@@ -63,6 +67,7 @@ namespace PCLFileSet
             this.FileSystem = fileSystem;
             this.IncludePaths = new List<string>();
             this.ExcludePaths = new List<string>();
+            this.ExceptionHandlers = new Dictionary<Type, List<ExceptionHandlerInfo>>();
 
             this.PreferredPathSeparator = PortablePath.DirectorySeparatorChar.ToString();
 
@@ -87,6 +92,29 @@ namespace PCLFileSet
         {
             this.ExcludePaths.Add(this.GetPathWithPreferredSeparator(globPath));
 
+            return this;
+        }
+
+        public IFileSet Catch<TException>(Action<TException> exceptionHandler)
+            where TException : Exception
+        {
+            return this.Catch(exceptionHandler, SynchronizationContext.Current);
+        }
+
+        public IFileSet Catch<TException>(Action<TException> exceptionHandler, SynchronizationContext synchronizationContext)
+            where TException : Exception
+        {
+            List<ExceptionHandlerInfo> handlerList;
+            if (!this.ExceptionHandlers.TryGetValue(typeof (TException), out handlerList))
+            {
+                handlerList = new List<ExceptionHandlerInfo>();
+                this.ExceptionHandlers.Add(typeof(TException), handlerList);
+            }
+            handlerList.Add(new ExceptionHandlerInfo()
+            {
+                ExceptionHandler = (Exception exc) => exceptionHandler((TException) exc),
+                SynchronizationContext = synchronizationContext,
+            });
             return this;
         }
 
@@ -150,7 +178,18 @@ namespace PCLFileSet
             
             return Observable.Create(async (IObserver<string> observer) =>
             {
-                await this.PostSubfolderFilesToObserverAsync(observer, baseFolder, baseFolder);
+                try
+                {
+                    await this.PostSubfolderFilesToObserverAsync(observer, baseFolder, baseFolder);
+                }
+                catch (Exception exc)
+                {
+                    var handled = this.CallMatchingExceptionHandlers(exc);
+
+                    if (!handled)
+                        throw;
+                }
+
                 observer.OnCompleted();
             });
         }
@@ -172,9 +211,40 @@ namespace PCLFileSet
 
             return Observable.Create(async (IObserver<string> observer) =>
             {
-                await this.PostSubfoldersToObserverAsync(observer, baseFolder, baseFolder);
+                try
+                {
+                    await this.PostSubfoldersToObserverAsync(observer, baseFolder, baseFolder);
+                }
+                catch (Exception exc)
+                {
+                    var handled = this.CallMatchingExceptionHandlers(exc);
+
+                    if (!handled)
+                        throw;
+                }
+
                 observer.OnCompleted();
             });
+        }
+
+        private bool CallMatchingExceptionHandlers(Exception exc)
+        {
+            bool handled = false;
+            foreach (var exceptionHandlerKVP in this.ExceptionHandlers)
+            {
+                if (exceptionHandlerKVP.Key.GetTypeInfo().IsAssignableFrom(exc.GetType().GetTypeInfo()))
+                {
+                    foreach (ExceptionHandlerInfo handlerInfo in exceptionHandlerKVP.Value)
+                    {
+                        if (handlerInfo.SynchronizationContext != null)
+                            handlerInfo.SynchronizationContext.Post((ex) => handlerInfo.ExceptionHandler((Exception)ex), exc);
+                        else
+                            handlerInfo.ExceptionHandler(exc);
+                        handled = true;
+                    }
+                }
+            }
+            return handled;
         }
 
         private async Task PostSubfoldersToObserverAsync(IObserver<string> observer, IFolder folder, IFolder baseFolder)
@@ -329,6 +399,12 @@ namespace PCLFileSet
 
             return pathRegexStrs.Select(x => new Regex(x.ToString(),
                 this._isCaseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase));
+        }
+
+        private class ExceptionHandlerInfo
+        {
+            public Action<Exception> ExceptionHandler { get; set; }
+            public SynchronizationContext SynchronizationContext { get; set; }
         }
     }
 }
