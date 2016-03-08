@@ -181,7 +181,7 @@ namespace PCLFileSet
             return Observable.Create(async (IObserver<string> observer) =>
             {
                 try
-                {
+                { 
                     await this.PostSubfolderFilesToObserverAsync(observer, baseFolder, baseFolder);
                 }
                 catch (Exception exc)
@@ -196,15 +196,32 @@ namespace PCLFileSet
             });
         }
 
-        private async Task PostSubfolderFilesToObserverAsync(IObserver<string> observer, IFolder folder, IFolder baseFolder)
+        private async Task PostSubfolderFilesToObserverAsync(IObserver<string> observer, IFolder folder,
+            IFolder baseFolder)
         {
             string folderRelativePath = this.BuildRelativePathFromBaseFolder(baseFolder, folder);
 
             foreach (IFile file in await folder.GetFilesAsync())
-                observer.OnNext(folderRelativePath.Length == 0 ? file.Name : string.Join(this.PreferredPathSeparator, folderRelativePath, file.Name));
+            {
+                observer.OnNext(folderRelativePath.Length == 0
+                    ? file.Name
+                    : string.Join(this.PreferredPathSeparator, folderRelativePath, file.Name));
+            }
 
             foreach (IFolder subfolder in await folder.GetFoldersAsync())
-                await this.PostSubfolderFilesToObserverAsync(observer, subfolder, baseFolder);
+            {
+                try
+                {
+                    await this.PostSubfolderFilesToObserverAsync(observer, subfolder, baseFolder);
+                }
+                catch (Exception exc)
+                {
+                    var handled = this.CallMatchingExceptionHandlers(exc);
+
+                    if (!handled)
+                        throw;
+                }
+            }
         }
 
         private async Task<IObservable<string>> GetAllFoldersAsObservableAsync()
@@ -231,6 +248,26 @@ namespace PCLFileSet
             });
         }
 
+        private async Task PostSubfoldersToObserverAsync(IObserver<string> observer, IFolder folder, IFolder baseFolder)
+        {
+            foreach (IFolder subfolder in await folder.GetFoldersAsync())
+            {
+                observer.OnNext(this.BuildRelativePathFromBaseFolder(baseFolder, subfolder));
+
+                try
+                { 
+                    await this.PostSubfoldersToObserverAsync(observer, subfolder, baseFolder);
+                }
+                catch (Exception exc)
+                {
+                    var handled = this.CallMatchingExceptionHandlers(exc);
+
+                    if (!handled)
+                        throw;
+                }
+            }
+        }
+
         private bool CallMatchingExceptionHandlers(Exception exc)
         {
             bool handled = false;
@@ -249,15 +286,6 @@ namespace PCLFileSet
                 }
             }
             return handled;
-        }
-
-        private async Task PostSubfoldersToObserverAsync(IObserver<string> observer, IFolder folder, IFolder baseFolder)
-        {
-            foreach (IFolder subfolder in await folder.GetFoldersAsync())
-            {
-                observer.OnNext(this.BuildRelativePathFromBaseFolder(baseFolder, subfolder));
-                await this.PostSubfoldersToObserverAsync(observer, subfolder, baseFolder);
-            }
         }
 
         private string BuildRelativePathFromBaseFolder(IFolder baseFolder, IFolder folder)
