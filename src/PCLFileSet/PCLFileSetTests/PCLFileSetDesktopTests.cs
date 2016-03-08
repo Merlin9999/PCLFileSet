@@ -78,7 +78,7 @@ namespace PCLFileSetTests
         }
 
         [Test]
-        public async Task AccessDeniedUnhandledIteratingFiles()
+        public void AccessDeniedUnhandledIteratingFiles()
         {
             string accessDeniedTest = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
             Assert.That(accessDeniedTest, Is.Not.Empty);
@@ -107,7 +107,7 @@ namespace PCLFileSetTests
         }
 
         [Test]
-        public async Task AccessDeniedUnhandledIteratingFolders()
+        public void AccessDeniedUnhandledIteratingFolders()
         {
             string accessDeniedTest = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
             Assert.That(accessDeniedTest, Is.Not.Empty);
@@ -136,7 +136,7 @@ namespace PCLFileSetTests
         }
 
         [Test]
-        public async Task SpecifyInvalidBasePathIteratingFiles()
+        public void SpecifyInvalidBasePathIteratingFiles()
         {
             FileSet fs = new FileSet(new DesktopFileSystem(), "./DoesNotExist");
             fs.Include("**/*");
@@ -145,7 +145,7 @@ namespace PCLFileSetTests
         }
 
         [Test]
-        public async Task SpecifyInvalidBasePathIteratingFolders()
+        public void SpecifyInvalidBasePathIteratingFolders()
         {
             FileSet fs = new FileSet(new DesktopFileSystem(), "./DoesNotExist");
             fs.Include("**/*");

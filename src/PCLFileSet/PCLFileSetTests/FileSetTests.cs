@@ -277,7 +277,7 @@ namespace PCLFileSetTests
         }
 
         [Test]
-        public async Task SpecifyInvalidBasePathIteratingFiles()
+        public void SpecifyInvalidBasePathIteratingFiles()
         {
             var sys = new MemoryFileSystemFake();
             sys.AddFiles(x => x
@@ -296,7 +296,7 @@ namespace PCLFileSetTests
         }
 
         [Test]
-        public async Task SpecifyInvalidBasePathIteratingFolders()
+        public void SpecifyInvalidBasePathIteratingFolders()
         {
             var sys = new MemoryFileSystemFake();
             sys.AddFiles(x => x
