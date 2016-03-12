@@ -21,7 +21,7 @@ namespace PCLFileSetTests
         public MemoryFolderFake(MemoryFileSystemFake fileSys, string folderPath, MemoryFolderFake parent)
         {
             this._fileSys = fileSys;
-            this.Name = folderPath == null ? null : this._fileSys.GetFolderPath(folderPath);
+            this.Name = folderPath == null ? null : this._fileSys.GetFileName(folderPath);
             this.Path = folderPath;
             this.Parent = parent;
             this.Files = new HashSet<string>(this._fileSys.EntryNameComparer);
