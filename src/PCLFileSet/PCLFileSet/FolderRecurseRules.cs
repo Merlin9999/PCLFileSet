@@ -10,11 +10,22 @@ namespace PCLFileSet
 {
     internal class FolderRecurseRules
     {
-        private List<string> _globPaths = new List<string>(); 
+        private List<string> _globPaths = new List<string>();
 
         public void AddGlobPath(string pathToAdd)
         {
             this._globPaths.Add(pathToAdd);
+        }
+
+        public void AddGlobPaths(params string[] pathsToAdd)
+        {
+            this.AddGlobPaths((IEnumerable<string>) pathsToAdd);
+        }
+
+        public void AddGlobPaths(IEnumerable<string> pathsToAdd)
+        {
+            foreach (string pathToAdd in pathsToAdd)
+                this._globPaths.Add(pathToAdd);
         }
 
         public List<FolderSegmentRule> GenerateRules(bool arePathsToFolders)

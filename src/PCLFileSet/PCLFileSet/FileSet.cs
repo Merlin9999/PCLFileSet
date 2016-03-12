@@ -10,6 +10,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using PCLStorage;
 
 namespace PCLFileSet
@@ -174,6 +175,10 @@ namespace PCLFileSet
 
         private async Task<IObservable<string>> GetAllFilesAsObservableAsync()
         {
+            var folderRecurseRules = new FolderRecurseRules();
+            folderRecurseRules.AddGlobPaths(this.IncludePaths);
+            List<FolderSegmentRule> rules = folderRecurseRules.GenerateRules(false);
+
             IFolder baseFolder = await this.FileSystem.GetFolderFromPathAsync(this.BasePath);
             if (baseFolder == null)
                 throw new InvalidOperationException($"Base path \"{this.BasePath}\" is not valid.");
@@ -182,7 +187,7 @@ namespace PCLFileSet
             {
                 try
                 { 
-                    await this.PostSubfolderFilesToObserverAsync(observer, baseFolder, baseFolder);
+                    await this.PostSubfolderFilesToObserverAsync(observer, baseFolder, baseFolder, rules, 0);
                 }
                 catch (Exception exc)
                 {
@@ -201,7 +206,7 @@ namespace PCLFileSet
         // first "**" segment (if any) may be able to be avoided.
 
         private async Task PostSubfolderFilesToObserverAsync(IObserver<string> observer, IFolder folder,
-            IFolder baseFolder)
+            IFolder baseFolder, List<FolderSegmentRule> rules, int folderSegmentLevel)
         {
             string folderRelativePath = this.BuildRelativePathFromBaseFolder(baseFolder, folder);
 
@@ -212,11 +217,16 @@ namespace PCLFileSet
                     : string.Join(this.PreferredPathSeparator, folderRelativePath, file.Name));
             }
 
+            List<Regex> folderPatternMatchRegexes = null;
             foreach (IFolder subfolder in await folder.GetFoldersAsync())
             {
                 try
                 {
-                    await this.PostSubfolderFilesToObserverAsync(observer, subfolder, baseFolder);
+                    if (this.ShouldRecurseIntoFolder(subfolder, rules, folderSegmentLevel, ref folderPatternMatchRegexes))
+                    {
+                        await this.PostSubfolderFilesToObserverAsync(observer, subfolder, baseFolder, rules,
+                            folderSegmentLevel + 1);
+                    }
                 }
                 catch (Exception exc)
                 {
@@ -230,6 +240,10 @@ namespace PCLFileSet
 
         private async Task<IObservable<string>> GetAllFoldersAsObservableAsync()
         {
+            var folderRecurseRules = new FolderRecurseRules();
+            folderRecurseRules.AddGlobPaths(this.IncludePaths);
+            List<FolderSegmentRule> rules = folderRecurseRules.GenerateRules(false);
+
             IFolder baseFolder = await this.FileSystem.GetFolderFromPathAsync(this.BasePath);
             if (baseFolder == null)
                 throw new InvalidOperationException($"Base path \"{this.BasePath}\" is not valid.");
@@ -238,7 +252,7 @@ namespace PCLFileSet
             {
                 try
                 {
-                    await this.PostSubfoldersToObserverAsync(observer, baseFolder, baseFolder);
+                    await this.PostSubfoldersToObserverAsync(observer, baseFolder, baseFolder, rules, 0);
                 }
                 catch (Exception exc)
                 {
@@ -252,15 +266,21 @@ namespace PCLFileSet
             });
         }
 
-        private async Task PostSubfoldersToObserverAsync(IObserver<string> observer, IFolder folder, IFolder baseFolder)
+        private async Task PostSubfoldersToObserverAsync(IObserver<string> observer, IFolder folder, IFolder baseFolder, 
+            List<FolderSegmentRule> rules, int folderSegmentLevel)
         {
+            List<Regex> folderPatternMatchRegexes = null;
             foreach (IFolder subfolder in await folder.GetFoldersAsync())
             {
                 observer.OnNext(this.BuildRelativePathFromBaseFolder(baseFolder, subfolder));
 
                 try
-                { 
-                    await this.PostSubfoldersToObserverAsync(observer, subfolder, baseFolder);
+                {
+                    if (this.ShouldRecurseIntoFolder(subfolder, rules, folderSegmentLevel, ref folderPatternMatchRegexes))
+                    {
+                        await this.PostSubfoldersToObserverAsync(observer, subfolder, baseFolder, 
+                            rules, folderSegmentLevel + 1);
+                    }
                 }
                 catch (Exception exc)
                 {
@@ -270,6 +290,37 @@ namespace PCLFileSet
                         throw;
                 }
             }
+        }
+
+        private bool ShouldRecurseIntoFolder(IFolder folder, List<FolderSegmentRule> rules, int folderSegmentLevel, ref List<Regex> folderPatternMatchRegexes)
+        {
+            if (folderSegmentLevel < rules.Count)
+            {
+                switch (rules[folderSegmentLevel].Type)
+                {
+                    case EFolderSegmentType.MatchAnyFolder:
+                    case EFolderSegmentType.MatchZeroOrMOreFoldersRecursive:
+                        return true;
+
+                    case EFolderSegmentType.MatchAnyFolderPattern:
+                        if (folderPatternMatchRegexes == null)
+                        {
+                            folderPatternMatchRegexes = rules[folderSegmentLevel].FolderNameRegexes
+                                .Select(s =>
+                                    new Regex(s,
+                                        this._isCaseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase))
+                                .ToList();
+                        }
+
+                        if (folderPatternMatchRegexes.Any(r => r.IsMatch(folder.Name)))
+                            return true;
+                        break;
+                }
+            }
+            else if (rules.Any() && rules.Last().Type == EFolderSegmentType.MatchZeroOrMOreFoldersRecursive)
+                return true;
+
+            return false;
         }
 
         private bool CallMatchingExceptionHandlers(Exception exc)
