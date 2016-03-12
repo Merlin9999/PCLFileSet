@@ -6,3 +6,5 @@ using System.Runtime.InteropServices;
 // See SharedAssemblyInfo.cs for compatible assembly attributes
 
 [assembly: NeutralResourcesLanguage("en")]
+
+[assembly: InternalsVisibleTo("PCLFileSetTests")]

@@ -196,6 +196,10 @@ namespace PCLFileSet
             });
         }
 
+        // How can the algorithm be adjusted to not traverse folder trees where the input
+        // glob paths clearly don't access? All path segments up to, but not including the 
+        // first "**" segment (if any) may be able to be avoided.
+
         private async Task PostSubfolderFilesToObserverAsync(IObserver<string> observer, IFolder folder,
             IFolder baseFolder)
         {
@@ -321,7 +325,7 @@ namespace PCLFileSet
                 : StringComparison.CurrentCultureIgnoreCase;
         }
 
-        private string[] SplitFolderPathIntoSegments(IFolder folder)
+        internal string[] SplitFolderPathIntoSegments(IFolder folder)
         {
             if (folder.Path == null)
                 return new string[0];

@@ -73,6 +73,7 @@
     </Compile>
     <Compile Include="AddFolderEntryImpl.cs" />
     <Compile Include="FileSetTests.cs" />
+    <Compile Include="FolderRecurseRulesTests.cs" />
     <Compile Include="IAddFolderEntry.cs" />
     <Compile Include="MemoryFileFake.cs" />
     <Compile Include="MemoryFileSystemFake.cs" />
