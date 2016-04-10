@@ -60,6 +60,30 @@ namespace PCLFileSetTests
         }
 
         [Test]
+        public async Task IncludeAllFilesInSubFolderBaseFolderAsIFolder()
+        {
+            var sys = new MemoryFileSystemFake();
+            const string fileNameToFind = "FileInSubFolder.txt";
+            string filePathToFind = PortablePath.Combine("b", fileNameToFind);
+            sys.AddFiles(x => x
+                .File("FileInRoot.txt")
+                .Folder("a", a => a
+                    .File("FileInFolder.txt")
+                    .File("AnotherFileInFolder.txt")
+                    .Folder("b", b => b
+                        .File(fileNameToFind)))
+                .Folder("c", c => c
+                    .File("FileInFolder.txt")));
+            IFolder baseFolder = await sys.GetFolderFromPathAsync("/a");
+            var fs = new FileSet(sys, baseFolder);
+            fs.Include(PortablePath.Combine("b", "*"));
+            List<string> files = (await fs.GetFilesAsync()).ToList();
+
+            Assert.That(files.Count, Is.EqualTo(1));
+            Assert.That(files, Has.Member(filePathToFind));
+        }
+
+        [Test]
         public async Task IncludeAllFilesInSubFolderWithBaseFolderEndingInSeparatorChar()
         {
             var sys = new MemoryFileSystemFake();

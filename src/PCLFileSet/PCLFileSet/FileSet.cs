@@ -28,15 +28,35 @@ namespace PCLFileSet
         public readonly string PreferredPathSeparator;
         public readonly string[] PathSeparators;
         public readonly IFileSystem FileSystem;
+
         public readonly string BasePath;
+        private IFolder _baseFolder;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileSet"/> class.
         /// </summary>
         /// <param name="fileSystem">The file system implementation.</param>
-        /// <param name="basePath">The base path.</param>
+        /// <param name="basePath">The base folder path.</param>
         /// <param name="isCaseSensitive">if set to <c>true</c> [is case sensitive].</param>
-        public FileSet(IFileSystem fileSystem, string basePath = null, bool isCaseSensitive = false)
+        public FileSet(IFileSystem fileSystem, string basePath = null, bool isCaseSensitive = false) 
+            : this(fileSystem, isCaseSensitive)
+        {
+            this.BasePath = this.GetPathWithPreferredSeparator(basePath ?? ".");
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FileSet"/> class.
+        /// </summary>
+        /// <param name="fileSystem">The file system implementation.</param>
+        /// <param name="baseFolder">The base folder.</param>
+        /// <param name="isCaseSensitive">if set to <c>true</c> [is case sensitive].</param>
+        public FileSet(IFileSystem fileSystem, IFolder baseFolder, bool isCaseSensitive = false) 
+            : this(fileSystem, isCaseSensitive)
+        {
+            this.BaseFolder = baseFolder;
+        }
+
+        private FileSet(IFileSystem fileSystem, bool isCaseSensitive)
         {
             this._isCaseSensitive = isCaseSensitive;
             this.FileSystem = fileSystem;
@@ -52,8 +72,25 @@ namespace PCLFileSet
 
             separatorHashSet.Remove(this.PreferredPathSeparator);
             this._alternatePathSeparators = separatorHashSet.ToArray();
+        }
 
-            this.BasePath = this.GetPathWithPreferredSeparator(basePath ?? ".");
+        public IFolder BaseFolder
+        {
+            get
+            {
+                if (this._baseFolder == null)
+                {
+                    Task<IFolder> folderTask = this.FileSystem.GetFolderFromPathAsync(this.BasePath);
+                    folderTask.WaitForTaskAndTranslateAggregateExceptions();
+                    this._baseFolder = folderTask.Result;
+                }
+
+                if (this._baseFolder == null)
+                    throw new InvalidOperationException($"Base path \"{this.BasePath}\" is not valid.");
+
+                return this._baseFolder;
+            }
+            set { this._baseFolder = value; }
         }
 
         /// <summary>
@@ -235,15 +272,11 @@ namespace PCLFileSet
             folderRecurseRules.AddGlobPaths(this.IncludePaths);
             List<FolderSegmentRule> rules = folderRecurseRules.GenerateRules(false);
 
-            IFolder baseFolder = await this.FileSystem.GetFolderFromPathAsync(this.BasePath);
-            if (baseFolder == null)
-                throw new InvalidOperationException($"Base path \"{this.BasePath}\" is not valid.");
-
             return Observable.Create(async (IObserver<string> observer) =>
             {
                 try
                 { 
-                    await this.PostSubfolderFilesToObserverAsync(observer, baseFolder, baseFolder, rules, 0);
+                    await this.PostSubfolderFilesToObserverAsync(observer, this.BaseFolder, this.BaseFolder, rules, 0);
                 }
                 catch (Exception exc)
                 {
@@ -296,15 +329,11 @@ namespace PCLFileSet
             folderRecurseRules.AddGlobPaths(this.IncludePaths);
             List<FolderSegmentRule> rules = folderRecurseRules.GenerateRules(false);
 
-            IFolder baseFolder = await this.FileSystem.GetFolderFromPathAsync(this.BasePath);
-            if (baseFolder == null)
-                throw new InvalidOperationException($"Base path \"{this.BasePath}\" is not valid.");
-
             return Observable.Create(async (IObserver<string> observer) =>
             {
                 try
                 {
-                    await this.PostSubfoldersToObserverAsync(observer, baseFolder, baseFolder, rules, 0);
+                    await this.PostSubfoldersToObserverAsync(observer, this.BaseFolder, this.BaseFolder, rules, 0);
                 }
                 catch (Exception exc)
                 {
