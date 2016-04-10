@@ -13,19 +13,11 @@ namespace PCLFileSet.ConsoleExample
     {
         static void Main(string[] args)
         {
-            Task<IEnumerable<string>> matchingFolderItemsTask = GetMatchingFolderItemsAsync();
-
-            matchingFolderItemsTask.WaitForTaskAndTranslateAggregateExceptions();
-
-            foreach (string fileName in matchingFolderItemsTask.Result)
-                Console.WriteLine(fileName);
-        }
-
-        private static async Task<IEnumerable<string>> GetMatchingFolderItemsAsync()
-        {
             FileSet fileSet = CreateFileSet();
-            IEnumerable<string> matchingFolderItems = await fileSet.GetFilesAsync();
-            return matchingFolderItems;
+            IEnumerable<string> matchingFolderItems = fileSet.GetFiles();
+
+            foreach (string fileName in matchingFolderItems)
+                Console.WriteLine(fileName);
         }
 
         private static FileSet CreateFileSet()

@@ -10,7 +10,7 @@ namespace PCLFileSet
         /// if thrown and translates to the contained exception, if there is only one.
         /// </summary>
         /// <param name="taskToWaitFor">The task to wait for.</param>
-        public static void WaitForTaskAndTranslateAggregateExceptions(this Task taskToWaitFor)
+        internal static void WaitForTaskAndTranslateAggregateExceptions(this Task taskToWaitFor)
         {
             TranslateAggregateExceptions(taskToWaitFor.Wait);
         }
@@ -20,7 +20,7 @@ namespace PCLFileSet
         /// contained exception, if there is only one.
         /// </summary>
         /// <param name="action">The action.</param>
-        public static void TranslateAggregateExceptions(this Action action)
+        internal static void TranslateAggregateExceptions(this Action action)
         {
             try
             {

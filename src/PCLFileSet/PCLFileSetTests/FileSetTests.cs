@@ -171,6 +171,22 @@ namespace PCLFileSetTests
         }
 
         [Test]
+        public void MultipleIncludesAndAnExclusionsNonAsync()
+        {
+            string filePathToFind1;
+            string filePathNotFound1;
+            string filePathToFind2;
+            string filePathNotFound2;
+            FileSet fs = CreateFileSetForMultipleIncludesAndAnExclusions(
+                out filePathToFind1, out filePathToFind2, out filePathNotFound1, out filePathNotFound2);
+
+            List<string> files = fs.GetFiles().ToList();
+
+            ValidateFileSetForMultipleIncludesAndAnExclusions(files,
+                filePathToFind1, filePathToFind2, filePathNotFound1, filePathNotFound2);
+        }
+
+        [Test]
         public async Task MultipleIncludesAndAnExclusions()
         {
             string filePathToFind1;
@@ -184,6 +200,28 @@ namespace PCLFileSetTests
 
             ValidateFileSetForMultipleIncludesAndAnExclusions(files,
                 filePathToFind1, filePathToFind2, filePathNotFound1, filePathNotFound2);
+        }
+
+        [Test]
+        public void MultipleIncludesAndAnExclusionsAsObservableNonAsync()
+        {
+            string filePathToFind1;
+            string filePathNotFound1;
+            string filePathToFind2;
+            string filePathNotFound2;
+            FileSet fs = CreateFileSetForMultipleIncludesAndAnExclusions(
+                out filePathToFind1, out filePathToFind2, out filePathNotFound1, out filePathNotFound2);
+
+            IObservable<string> filesObservable = fs.GetFilesAsObservable();
+
+            List<string> files = new List<string>();
+            filesObservable
+                .Finally(() =>
+                {
+                    ValidateFileSetForMultipleIncludesAndAnExclusions(files, 
+                        filePathToFind1, filePathToFind2, filePathNotFound1, filePathNotFound2);
+                })
+                .Subscribe(filePath => files.Add(filePath));
         }
 
         [Test]
@@ -202,7 +240,7 @@ namespace PCLFileSetTests
             filesObservable
                 .Finally(() =>
                 {
-                    ValidateFileSetForMultipleIncludesAndAnExclusions(files, 
+                    ValidateFileSetForMultipleIncludesAndAnExclusions(files,
                         filePathToFind1, filePathToFind2, filePathNotFound1, filePathNotFound2);
                 })
                 .Subscribe(filePath => files.Add(filePath));
@@ -296,6 +334,25 @@ namespace PCLFileSetTests
         }
 
         [Test]
+        public void SpecifyInvalidBasePathIteratingFilesNonAsync()
+        {
+            var sys = new MemoryFileSystemFake();
+            sys.AddFiles(x => x
+                .File("FileInRoot.txt")
+                .Folder("a", a => a
+                    .File("FileInFolder.txt")
+                    .File("AnotherFileInFolder.txt")
+                    .Folder("b", b => b
+                        .File("FileInSubFolder.txt")))
+                .Folder("c", c => c
+                    .File("FileInFolder.txt")));
+            var fs = new FileSet(sys, "/DoesNotExist");
+            fs.Include(@"**\*");
+
+            Assert.That(() => fs.GetFiles().ToList(), Throws.TypeOf<InvalidOperationException>());
+        }
+
+        [Test]
         public void SpecifyInvalidBasePathIteratingFolders()
         {
             var sys = new MemoryFileSystemFake();
@@ -311,6 +368,24 @@ namespace PCLFileSetTests
             var fs = new FileSet(sys, "/DoesNotExist");
             fs.Include(@"**\*");
             Assert.That(async () => (await fs.GetFoldersAsync()).ToList(), Throws.TypeOf<InvalidOperationException>());
+        }
+
+        [Test]
+        public void SpecifyInvalidBasePathIteratingFoldersNonAsync()
+        {
+            var sys = new MemoryFileSystemFake();
+            sys.AddFiles(x => x
+                .File("FileInRoot.txt")
+                .Folder("a", a => a
+                    .File("FileInFolder.txt")
+                    .File("AnotherFileInFolder.txt")
+                    .Folder("b", b => b
+                        .File("FileInSubFolder.txt")))
+                .Folder("c", c => c
+                    .File("FileInFolder.txt")));
+            var fs = new FileSet(sys, "/DoesNotExist");
+            fs.Include(@"**\*");
+            Assert.That(() => fs.GetFolders().ToList(), Throws.TypeOf<InvalidOperationException>());
         }
 
         [Test]
@@ -627,7 +702,7 @@ namespace PCLFileSetTests
                     .Folder("C", c => c
                         .File(foundFileName))));
 
-            List<string> files = (await FileSet.GetFilesAsync(sys, @"**\*")).ToList();
+            List<string> files = (await sys.GetFilesAsync(@"**\*")).ToList();
 
             Assert.That(files.Count, Is.EqualTo(4));
             Assert.That(files, Has.Member(foundFileName));
@@ -652,7 +727,7 @@ namespace PCLFileSetTests
                     .Folder("C", c => c
                         .File(foundFileName))));
 
-            List<string> files = (await FileSet.GetFilesAsync(sys, @"**\*", basePath: @"\A")).ToList();
+            List<string> files = (await sys.GetFilesAsync(@"**\*", basePath: @"\A")).ToList();
 
             Assert.That(files.Count, Is.EqualTo(3));
             Assert.That(files, Has.Member(foundFileName));
@@ -677,7 +752,7 @@ namespace PCLFileSetTests
                     .Folder("C", c => c
                         .File(foundFileName))));
 
-            IObservable<string> filesObservable = await FileSet.GetFilesAsObservableAsync(sys, @"**\*");
+            IObservable<string> filesObservable = await sys.GetFilesAsObservableAsync(@"**\*");
             List<string> files = new List<string>();
 
             filesObservable
@@ -704,7 +779,7 @@ namespace PCLFileSetTests
                     .Folder("B", b => b)
                     .Folder("C", c => c)));
 
-            List<string> files = (await FileSet.GetFoldersAsync(sys, @"**\*")).ToList();
+            List<string> files = (await sys.GetFoldersAsync(@"**\*")).ToList();
 
             Assert.That(files.Count, Is.EqualTo(3));
             Assert.That(files, Has.Member(foundFilePath1));
@@ -723,11 +798,37 @@ namespace PCLFileSetTests
                     .Folder("B", b => b)
                     .Folder("C", c => c)));
 
-            List<string> files = (await FileSet.GetFoldersAsync(sys, @"**\*", basePath: @"\A")).ToList();
+            List<string> files = (await sys.GetFoldersAsync(@"**\*", basePath: @"\A")).ToList();
 
             Assert.That(files.Count, Is.EqualTo(2));
             Assert.That(files, Has.Member(foundFilePath1));
             Assert.That(files, Has.Member(foundFilePath2));
+        }
+
+        [Test]
+        public void GetFoldersAsObservableStaticMethodNonAsync()
+        {
+            var sys = new MemoryFileSystemFake();
+            string foundFilePath1 = PortablePath.Combine("A");
+            string foundFilePath2 = PortablePath.Combine("A", "B");
+            string foundFilePath3 = PortablePath.Combine("A", "C");
+            sys.AddFilesAndFolders(x => x
+                .Folder("A", a => a
+                    .Folder("B", b => b)
+                    .Folder("C", c => c)));
+
+            IObservable<string> filesObservable = sys.GetFoldersAsObservable(@"**\*");
+            List<string> files = new List<string>();
+
+            filesObservable
+                .Finally(() =>
+                {
+                    Assert.That(files.Count, Is.EqualTo(3));
+                    Assert.That(files, Has.Member(foundFilePath1));
+                    Assert.That(files, Has.Member(foundFilePath2));
+                    Assert.That(files, Has.Member(foundFilePath3));
+                })
+                .Subscribe(filePath => files.Add(filePath));
         }
 
         [Test]
@@ -742,7 +843,7 @@ namespace PCLFileSetTests
                     .Folder("B", b => b)
                     .Folder("C", c => c)));
 
-            IObservable<string> filesObservable = await FileSet.GetFoldersAsObservableAsync(sys, @"**\*");
+            IObservable<string> filesObservable = await sys.GetFoldersAsObservableAsync(@"**\*");
             List<string> files = new List<string>();
 
             filesObservable

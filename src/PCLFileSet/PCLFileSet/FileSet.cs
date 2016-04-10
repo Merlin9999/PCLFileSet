@@ -23,52 +23,26 @@ namespace PCLFileSet
         private readonly string[] _alternatePathSeparators;
         private List<string> IncludePaths { get; }
         private List<string> ExcludePaths { get; }
-        private Dictionary<Type,List<ExceptionHandlerInfo>> ExceptionHandlers { get; }
+        private Dictionary<Type,List<FileSet.ExceptionHandlerInfo>> ExceptionHandlers { get; }
 
         public readonly string PreferredPathSeparator;
         public readonly string[] PathSeparators;
         public readonly IFileSystem FileSystem;
         public readonly string BasePath;
 
-        public static async Task<IEnumerable<string>> GetFilesAsync(IFileSystem fileSystem, 
-            string globPath, string basePath = null)
-        {
-            var fileSet = new FileSet(fileSystem, basePath: basePath);
-            fileSet.Include(globPath);
-            return await fileSet.GetFilesAsync();
-        }
-
-        public static async Task<IObservable<string>> GetFilesAsObservableAsync(IFileSystem fileSystem,
-            string globPath, string basePath = null)
-        {
-            var fileSet = new FileSet(fileSystem, basePath: basePath);
-            fileSet.Include(globPath);
-            return await fileSet.GetFilesAsObservableAsync();
-        }
-
-        public static async Task<IEnumerable<string>> GetFoldersAsync(IFileSystem fileSystem,
-            string globPath, string basePath = null)
-        {
-            var fileSet = new FileSet(fileSystem, basePath: basePath);
-            fileSet.Include(globPath);
-            return await fileSet.GetFoldersAsync();
-        }
-
-        public static async Task<IObservable<string>> GetFoldersAsObservableAsync(IFileSystem fileSystem,
-            string globPath, string basePath = null)
-        {
-            var fileSet = new FileSet(fileSystem, basePath: basePath);
-            fileSet.Include(globPath);
-            return await fileSet.GetFoldersAsObservableAsync();
-        }
-
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FileSet"/> class.
+        /// </summary>
+        /// <param name="fileSystem">The file system implementation.</param>
+        /// <param name="basePath">The base path.</param>
+        /// <param name="isCaseSensitive">if set to <c>true</c> [is case sensitive].</param>
         public FileSet(IFileSystem fileSystem, string basePath = null, bool isCaseSensitive = false)
         {
             this._isCaseSensitive = isCaseSensitive;
             this.FileSystem = fileSystem;
             this.IncludePaths = new List<string>();
             this.ExcludePaths = new List<string>();
-            this.ExceptionHandlers = new Dictionary<Type, List<ExceptionHandlerInfo>>();
+            this.ExceptionHandlers = new Dictionary<Type, List<FileSet.ExceptionHandlerInfo>>();
 
             this.PreferredPathSeparator = PortablePath.DirectorySeparatorChar.ToString();
 
@@ -82,6 +56,11 @@ namespace PCLFileSet
             this.BasePath = this.GetPathWithPreferredSeparator(basePath ?? ".");
         }
 
+        /// <summary>
+        /// Specify a glob path to be included. Ex: "**\*.txt" and "root/*/a?.doc"
+        /// </summary>
+        /// <param name="globPath">The glob path.</param>
+        /// <returns></returns>
         public IFileSet Include(string globPath)
         {
             this.IncludePaths.Add(this.GetPathWithPreferredSeparator(globPath));
@@ -89,6 +68,11 @@ namespace PCLFileSet
             return this;
         }
 
+        /// <summary>
+        /// Specify a glob path to be excluded. Ex: "**\*.txt" and "root/*/a?.doc"
+        /// </summary>
+        /// <param name="globPath">The glob path.</param>
+        /// <returns></returns>
         public IFileSet Exclude(string globPath)
         {
             this.ExcludePaths.Add(this.GetPathWithPreferredSeparator(globPath));
@@ -96,22 +80,38 @@ namespace PCLFileSet
             return this;
         }
 
+        /// <summary>
+        /// Catches the specified exception type. Note: The exception handler delegate is executed on
+        /// <see cref="SynchronizationContext.Current" /> value that was when Catch() was called.
+        /// </summary>
+        /// <typeparam name="TException">The type of the exception to be caught and handled.</typeparam>
+        /// <param name="exceptionHandler">The exception handler. Commonly and empty block. Ex: ex =&gt; { }</param>
+        /// <returns></returns>
         public IFileSet Catch<TException>(Action<TException> exceptionHandler)
             where TException : Exception
         {
             return this.Catch(exceptionHandler, SynchronizationContext.Current);
         }
 
+        /// <summary>
+        /// Catches the specified exception type.
+        /// </summary>
+        /// <typeparam name="TException">The type of the exception to be caught and handled.</typeparam>
+        /// <param name="exceptionHandler">The exception handler. Commonly and empty block. Ex: ex =&gt; { }</param>
+        /// <param name="synchronizationContext">The exception handler delegate is executed on this
+        /// <see cref="SynchronizationContext" /></param>
+        /// <returns></returns>
+        /// .
         public IFileSet Catch<TException>(Action<TException> exceptionHandler, SynchronizationContext synchronizationContext)
             where TException : Exception
         {
-            List<ExceptionHandlerInfo> handlerList;
+            List<FileSet.ExceptionHandlerInfo> handlerList;
             if (!this.ExceptionHandlers.TryGetValue(typeof (TException), out handlerList))
             {
-                handlerList = new List<ExceptionHandlerInfo>();
+                handlerList = new List<FileSet.ExceptionHandlerInfo>();
                 this.ExceptionHandlers.Add(typeof(TException), handlerList);
             }
-            handlerList.Add(new ExceptionHandlerInfo()
+            handlerList.Add(new FileSet.ExceptionHandlerInfo()
             {
                 ExceptionHandler = (Exception exc) => exceptionHandler((TException) exc),
                 SynchronizationContext = synchronizationContext,
@@ -119,6 +119,32 @@ namespace PCLFileSet
             return this;
         }
 
+        /// <summary>
+        /// Gets the specified files.
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<string> GetFiles()
+        {
+            Task<IEnumerable<string>> filesTask = this.GetFilesAsync();
+            filesTask.WaitForTaskAndTranslateAggregateExceptions();
+            return filesTask.Result;
+        }
+
+        /// <summary>
+        /// Gets the specified folders.
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<string> GetFolders()
+        {
+            Task<IEnumerable<string>> foldersTask = this.GetFoldersAsync();
+            foldersTask.WaitForTaskAndTranslateAggregateExceptions();
+            return foldersTask.Result;
+        }
+
+        /// <summary>
+        /// Gets the specified files.
+        /// </summary>
+        /// <returns></returns>
         public async Task<IEnumerable<string>> GetFilesAsync()
         {
             var includeRegexList = this.IncludePaths.SelectMany(p => this.BuildPathMatchRegexes(p)).ToList();
@@ -131,6 +157,10 @@ namespace PCLFileSet
                 .Where(filePath => !excludeRegexList.Any(excludeRegex => excludeRegex.IsMatch(filePath)));
         }
 
+        /// <summary>
+        /// Gets the specified folders.
+        /// </summary>
+        /// <returns></returns>
         public async Task<IEnumerable<string>> GetFoldersAsync()
         {
             var includeRegexList = this.IncludePaths.SelectMany(p => this.BuildPathMatchRegexes(p)).ToList();
@@ -143,6 +173,32 @@ namespace PCLFileSet
                 .Where(folderPath => !excludeRegexList.Any(excludeRegex => excludeRegex.IsMatch(folderPath)));
         }
 
+        /// <summary>
+        /// Gets the specified files.
+        /// </summary>
+        /// <returns></returns>
+        public IObservable<string> GetFilesAsObservable()
+        {
+            Task<IObservable<string>> filesTask = this.GetFilesAsObservableAsync();
+            filesTask.WaitForTaskAndTranslateAggregateExceptions();
+            return filesTask.Result;
+        }
+
+        /// <summary>
+        /// Gets the specified folders.
+        /// </summary>
+        /// <returns></returns>
+        public IObservable<string> GetFoldersAsObservable()
+        {
+            Task<IObservable<string>> foldersTask = this.GetFoldersAsObservableAsync();
+            foldersTask.WaitForTaskAndTranslateAggregateExceptions();
+            return foldersTask.Result;
+        }
+
+        /// <summary>
+        /// Gets the specified files.
+        /// </summary>
+        /// <returns></returns>
         public async Task<IObservable<string>> GetFilesAsObservableAsync()
         {
             var includeRegexList = this.IncludePaths.SelectMany(p => this.BuildPathMatchRegexes(p)).ToList();
@@ -200,10 +256,6 @@ namespace PCLFileSet
                 observer.OnCompleted();
             });
         }
-
-        // How can the algorithm be adjusted to not traverse folder trees where the input
-        // glob paths clearly don't access? All path segments up to, but not including the 
-        // first "**" segment (if any) may be able to be avoided.
 
         private async Task PostSubfolderFilesToObserverAsync(IObserver<string> observer, IFolder folder,
             IFolder baseFolder, List<FolderSegmentRule> rules, int folderSegmentLevel)
@@ -330,7 +382,7 @@ namespace PCLFileSet
             {
                 if (exceptionHandlerKVP.Key.GetTypeInfo().IsAssignableFrom(exc.GetType().GetTypeInfo()))
                 {
-                    foreach (ExceptionHandlerInfo handlerInfo in exceptionHandlerKVP.Value)
+                    foreach (FileSet.ExceptionHandlerInfo handlerInfo in exceptionHandlerKVP.Value)
                     {
                         if (handlerInfo.SynchronizationContext != null)
                             handlerInfo.SynchronizationContext.Post((ex) => handlerInfo.ExceptionHandler((Exception)ex), exc);

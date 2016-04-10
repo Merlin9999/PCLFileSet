@@ -39,6 +39,7 @@
     </Compile>
     <Compile Include="ExceptionHelper.cs" />
     <Compile Include="FileSet.cs" />
+    <Compile Include="FileSetExtensions.cs" />
     <Compile Include="FolderRecurseRules.cs" />
     <Compile Include="IFileSet.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
