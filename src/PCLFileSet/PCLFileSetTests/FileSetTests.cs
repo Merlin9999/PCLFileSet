@@ -171,7 +171,7 @@ namespace PCLFileSetTests
         }
 
         [Test]
-        public void MultipleIncludesAndAnExclusionsNonAsync()
+        public void MultipleIncludesAndAnExclusions()
         {
             string filePathToFind1;
             string filePathNotFound1;
@@ -187,7 +187,7 @@ namespace PCLFileSetTests
         }
 
         [Test]
-        public async Task MultipleIncludesAndAnExclusions()
+        public async Task MultipleIncludesAndAnExclusionsAsync()
         {
             string filePathToFind1;
             string filePathNotFound1;
@@ -315,7 +315,7 @@ namespace PCLFileSetTests
         }
 
         [Test]
-        public void SpecifyInvalidBasePathIteratingFiles()
+        public void SpecifyInvalidBasePathIteratingFilesAsync()
         {
             var sys = new MemoryFileSystemFake();
             sys.AddFiles(x => x
@@ -334,7 +334,7 @@ namespace PCLFileSetTests
         }
 
         [Test]
-        public void SpecifyInvalidBasePathIteratingFilesNonAsync()
+        public void SpecifyInvalidBasePathIteratingFiles()
         {
             var sys = new MemoryFileSystemFake();
             sys.AddFiles(x => x
@@ -353,7 +353,7 @@ namespace PCLFileSetTests
         }
 
         [Test]
-        public void SpecifyInvalidBasePathIteratingFolders()
+        public void SpecifyInvalidBasePathIteratingFoldersAsync()
         {
             var sys = new MemoryFileSystemFake();
             sys.AddFiles(x => x
@@ -371,7 +371,7 @@ namespace PCLFileSetTests
         }
 
         [Test]
-        public void SpecifyInvalidBasePathIteratingFoldersNonAsync()
+        public void SpecifyInvalidBasePathIteratingFolders()
         {
             var sys = new MemoryFileSystemFake();
             sys.AddFiles(x => x
@@ -806,7 +806,7 @@ namespace PCLFileSetTests
         }
 
         [Test]
-        public void GetFoldersAsObservableStaticMethodNonAsync()
+        public void GetFoldersAsObservableStaticMethod()
         {
             var sys = new MemoryFileSystemFake();
             string foundFilePath1 = PortablePath.Combine("A");
@@ -832,7 +832,7 @@ namespace PCLFileSetTests
         }
 
         [Test]
-        public async Task GetFoldersAsObservableStaticMethod()
+        public async Task GetFoldersAsObservableStaticMethodAsync()
         {
             var sys = new MemoryFileSystemFake();
             string foundFilePath1 = PortablePath.Combine("A");
