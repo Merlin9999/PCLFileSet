@@ -1,6 +1,6 @@
 # PCLFileSet
 
-PCLFileSet is a c# library inspired by [nAnt's](http://nant.sourceforge.net/) ```<fileset>```. A file set allows you to create a sequence of files (or folders) by specifying one or more file specifications that may utilize wildcards. Multiple file specifications for inclusion and exclusion can be specified. Exclusion file specifications filter files (or folders) that would otherwise be included.
+PCLFileSet is a c# library inspired by [nAnt's](http://nant.sourceforge.net/) [&lt;fileset&gt;](http://nant.sourceforge.net/release/latest/help/types/fileset.html). A file set allows you to create a sequence of files (or folders) by specifying one or more file specifications that may utilize wildcards. Multiple file specifications for inclusion and exclusion can be specified. Exclusion file specifications filter files (or folders) that would otherwise be included.
 
 ## File Specifications
 File specifications can use wildcards such as `*`, `?`, and `**`. 
