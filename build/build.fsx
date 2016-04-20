@@ -75,6 +75,7 @@ Target "NuGetPack" (fun _ ->
     "../src/PCLFileSet/PCLFileSet/PCLFileSet.csproj"
         |> NuGet (fun p -> 
             {p with
+                Properties = [("Configuration", configuration)];
                 OutputPath = nugetOutPath;
                 WorkingDir = nugetWorkPath;
                 Version = dllVersion;
