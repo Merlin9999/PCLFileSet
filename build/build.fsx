@@ -12,7 +12,7 @@ let nugetWorkPath = nugetOutPath + "/temp"
 let sharedAssemblyInfoFile = srcPath @@ "PCLFileSet/Shared/SharedAssemblyInfo.cs"
 let nugetPackagesFolder = srcPath @@ "PCLFileSet/packages"
 
-exception UnkownLibraryVersion of string
+exception UnknownLibraryVersion of string
 
 Target "Clean" (fun _ ->
     solutionPaths |> Seq.iter (fun solutionPath -> CleanDirs !! (solutionPath + "/**/bin/" + configuration))
@@ -67,7 +67,7 @@ Target "NuGetPack" (fun _ ->
     let dllVersion = 
         match someDllVersion with
             | Some x -> x
-            | None -> raise (UnkownLibraryVersion "AssemblyVersion not found in Assembly Info file!")
+            | None -> raise (UnknownLibraryVersion "AssemblyVersion not found in Assembly Info file!")
 
     CreateDir nugetOutPath
     CreateDir nugetWorkPath
