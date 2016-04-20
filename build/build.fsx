@@ -4,11 +4,13 @@ open Fake.Testing.NUnit3
 open System.IO
 
 let configuration = "Release"
-let solutions = !! "./../src/**/*.sln"
+let srcPath = "./../src"
+let solutions = !! (srcPath @@ "**/*.sln")
 let solutionPaths = solutions |> Seq.map (fun solutionFile -> Path.GetDirectoryName solutionFile)
 let nugetOutPath = "./../nuget"
 let nugetWorkPath = nugetOutPath + "/temp"
-let sharedAssemblyInfoFile = "./../src/PCLFileSet/Shared/SharedAssemblyInfo.cs"
+let sharedAssemblyInfoFile = srcPath @@ "PCLFileSet/Shared/SharedAssemblyInfo.cs"
+let nugetPackagesFolder = srcPath @@ "PCLFileSet/packages"
 
 exception UnkownLibraryVersion of string
 
@@ -20,13 +22,14 @@ Target "Clean" (fun _ ->
 )
 
 Target "RestorePackages" (fun _ -> 
+    CreateDir nugetPackagesFolder
+
     for solutionFile in solutions do 
-        //printf "NuGet Restore for: %s\n" solutionFile
         (RestoreMSSolutionPackages (fun p ->
             { p with
                 Sources = "https://nuget.org/api/v2" :: p.Sources
-                //OutputPath = outputDir
-                Retries = 4 }), 
+                OutputPath = nugetPackagesFolder
+                Retries = 4 })  
             solutionFile) |> ignore
 )
 
@@ -40,7 +43,7 @@ Target "Build" (fun _ ->
                     "Optimize", "True"
                     //"TreatWarningsAsErrors", "True"
                     "Platform", "Any CPU" // "Any CPU" or "x86", or "x64"
-                    //"DebugSymbols", "True"
+                    "DebugSymbols", "True"
                     "Configuration", configuration
                 ]
          }
@@ -51,11 +54,6 @@ Target "Build" (fun _ ->
 )
 
 Target "NUnitTest" (fun _ -> 
-    let nunitConsoleExes = !! ("./packages/**/nunit*-console.exe")
-    let nunitColsoleExeFullPath = Seq.last nunitConsoleExes
-    let nunitConsoleExeName = Path.GetFileName nunitColsoleExeFullPath
-    let nunitConsoleExePath = Path.GetDirectoryName nunitColsoleExeFullPath
-    
     !! ("./../src/**/bin/" + configuration + "/*Tests.dll")
         |> NUnit3 (fun p -> 
             {p with
@@ -77,11 +75,7 @@ Target "NuGetPack" (fun _ ->
     "../src/PCLFileSet/PCLFileSet/PCLFileSet.csproj"
         |> NuGet (fun p -> 
             {p with
-                // Authors = authors;
-                // Project = projectName;
-                // Description = projectDescription;                        
                 OutputPath = nugetOutPath;
-                // Summary = projectSummary;
                 WorkingDir = nugetWorkPath;
                 Version = dllVersion;
                 // AccessKey = myAccesskey;
@@ -104,5 +98,3 @@ Target "Default" (fun _ ->
     ==> "Default"
 
 RunTargetOrDefault "Default"
-
-
