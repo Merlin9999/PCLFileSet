@@ -35,6 +35,17 @@ namespace PCLFileSet
         /// <summary>
         /// Initializes a new instance of the <see cref="FileSet"/> class.
         /// </summary>
+        /// <param name="basePath">The base folder path.</param>
+        /// <param name="isCaseSensitive">if set to <c>true</c> [is case sensitive].</param>
+        public FileSet(string basePath = null, bool isCaseSensitive = false)
+            : this(PCLStorage.FileSystem.Current, isCaseSensitive)
+        {
+            this.BasePath = this.GetPathWithPreferredSeparator(basePath ?? ".");
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FileSet"/> class.
+        /// </summary>
         /// <param name="fileSystem">The file system implementation.</param>
         /// <param name="basePath">The base folder path.</param>
         /// <param name="isCaseSensitive">if set to <c>true</c> [is case sensitive].</param>

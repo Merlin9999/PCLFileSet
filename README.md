@@ -40,7 +40,7 @@ namespace PCLFileSet.ConsoleExample
         private static FileSet CreateFileSet()
         {
             string baseFolder = @".\..\..";
-            var fileSet = new FileSet(new DesktopFileSystem(), baseFolder);
+            var fileSet = new FileSet(baseFolder);
 
             fileSet
                 .Include(@"bin\Debug\*.exe")
