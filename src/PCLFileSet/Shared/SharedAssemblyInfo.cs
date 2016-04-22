@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("PCLFileSet")]
-[assembly: AssemblyDescription("File set from multiple inclusion/exclusion glob paths.")]
+[assembly: AssemblyDescription("Generates a sequence of relative file paths from multiple inclusion/exclusion paths supporting *, ?, and ** wildcards.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Marc Behnke")]
 [assembly: AssemblyProduct("PCLFileSet")]
