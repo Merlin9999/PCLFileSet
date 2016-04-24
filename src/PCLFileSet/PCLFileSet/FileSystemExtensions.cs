@@ -5,7 +5,7 @@ using PCLStorage;
 
 namespace PCLFileSet
 {
-    public static class FileSetExtensions
+    public static class FileSystemExtensions
     {
         /// <summary>
         /// Gets the specified files.
