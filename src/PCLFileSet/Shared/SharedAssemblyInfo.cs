@@ -4,15 +4,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("PCLFileSet")]
-[assembly: AssemblyDescription("Generates a sequence of relative file paths from multiple inclusion/exclusion paths supporting *, ?, and ** wildcards.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Marc Behnke")]
 [assembly: AssemblyProduct("PCLFileSet")]
 [assembly: AssemblyCopyright("Copyright © Marc Behnke 2016")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
-
 
 // Version information for an assembly consists of the following four values:
 //
