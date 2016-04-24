@@ -5,6 +5,9 @@ using PCLStorage;
 
 namespace PCLFileSet
 {
+    /// <summary>
+    /// A static class with extension methods for the interface <see cref="IFileSystem"/>.
+    /// </summary>
     public static class FileSystemExtensions
     {
         /// <summary>
