@@ -72,7 +72,19 @@ Target "NuGetPack" (fun _ ->
     CreateDir nugetOutPath
     CreateDir nugetWorkPath
 
+    CleanDir nugetWorkPath
     "../src/PCLFileSet/PCLFileSet/PCLFileSet.csproj"
+        |> NuGet (fun p -> 
+            {p with
+                Properties = [("Configuration", configuration)];
+                OutputPath = nugetOutPath;
+                WorkingDir = nugetWorkPath;
+                Version = dllVersion;
+                // AccessKey = myAccesskey;
+                // Publish = true;
+                })
+    CleanDir nugetWorkPath
+    "../src/PCLFileSet/PCLFileSet.Desktop/PCLFileSet.Desktop.csproj"
         |> NuGet (fun p -> 
             {p with
                 Properties = [("Configuration", configuration)];
