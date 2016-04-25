@@ -1,9 +1,13 @@
 # PCLFileSet
 
-PCLFileSet is a c# library inspired by [nAnt's](http://nant.sourceforge.net/) [&lt;fileset&gt;](http://nant.sourceforge.net/release/latest/help/types/fileset.html). It generates a sequence of relative file (or folder) paths by specifying one or more file specifications that supports wildcard characters. Multiple file specifications for inclusion and exclusion can be specified. Exclusion file specifications filter files (or folders) that were otherwise included.
+PCLFileSet is a c# portable library inspired by [nAnt's](http://nant.sourceforge.net/) [&lt;fileset&gt;](http://nant.sourceforge.net/release/latest/help/types/fileset.html). It generates a sequence of relative file (or folder) paths by specifying one or more file specifications that supports wildcard characters. Multiple file specifications for inclusion and exclusion are supported. Exclusion file specifications filter files (or folders) that were otherwise included.
 
-## Getting the Library
-The preferred way to get the library and its dependencies is from [NuGet](https://www.nuget.org/packages/PCLFileSet/). The source code is available on [GitHub](https://github.com/Merlin9999/PCLFileSet).
+PCLFileSet.Desktop adds file copy and zip file creation based on the files identified in a FileSet.
+
+## Getting the Libraries
+Libraries are available on [NuGet](http://www.nuget.org).
+* The PCLFileSet library is found [here](http://www.nuget.org/packages/PCLFileSet/)
+* The PCLFileSet.Desktop library is found [here](http://www.nuget.org/packages/PCLFileSet.Desktop/)
 
 ## File Specifications
 File specifications can use wildcards such as `*`, `?`, and `**`. 
