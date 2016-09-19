@@ -11,8 +11,8 @@ Libraries are available on [NuGet](http://www.nuget.org).
 
 ## File Specifications
 File specifications can use wildcards such as `*`, `?`, and `**`. 
-* `*` matches 1 or more of any character
-* `?` matches any one character
+* `*` matches any 1 or more characters of a folder or file name
+* `?` matches any one character of a folder or file name
 * `**` when used as a folder name, matches zero or more sub-folders
 
 Supported folder path separator characters include both `/` and `\`.
